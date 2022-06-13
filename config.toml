@@ -1,4 +1,4 @@
-baseURL = "https://tsubasaxzzz.github.io/fta-hackon2022/"
+baseURL = "https://azure.github.io/fta-kusto100kocks/"
 title = "KUSTO 100+ knocks"
 theme = "docsy"
 
@@ -100,9 +100,9 @@ version = "0.0"
 url_latest_version = "https://example.com"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
-github_repo = "https://github.com/tsubasaxZZZ/fta-hackon2022"
+github_repo = "https://github.com/Azure/fta-kusto100kocks/"
 # An optional link to a related project repo. For example, the sibling repository where your product code lives.
-github_project_repo = "https://github.com/tsubasaxZZZ/fta-hackon2022"
+github_project_repo = "https://github.com/Azure/fta-kusto100kocks/"
 
 # Specify a value here if your content directory is not in your repo's root directory
 # github_subdir = ""
@@ -159,6 +159,6 @@ enable = false
 # Developer relevant links. These will show up on right side of footer and in the community page if you have one.
 [[params.links.developer]]
   name = "GitHub"
-  url = "https://github.com/tsubasaxZZZ/fta-hackon2022"
+  url = "https://github.com/Azure/fta-kusto100kocks/"
   icon = "fab fa-github"
   desc = "Development takes place here!"
