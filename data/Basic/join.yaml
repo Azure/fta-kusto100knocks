@@ -1,0 +1,73 @@
+category: Basic
+kind: join
+contents:
+  - title_ja: NA
+    title_en: "Join VMComputer and InsightMetrics to get last heartbeat per computer"
+    query: |
+      ```javascript
+      VMComputer
+      | project Computer, OperatingSystemFullName, _ResourceId
+      | join (
+      InsightsMetrics 
+      | where Name == "Heartbeat"
+      | summarize LastHeartbeat = arg_max(TimeGenerated, *) by _ResourceId
+      | project LastHeartbeat, _ResourceId
+      ) on _ResourceId
+      | project-away _ResourceId1
+      ```
+    description_ja: NA
+    description_en: Use the join operator to join two tables to see last heartbeat per computer
+  - title_ja: NA
+    title_en: "Join two queries from the SecurityEvents table together to determine logon duration"
+    query: |
+      ```javascript
+      SecurityEvent 
+      | where EventID == 4624		// sign-in events
+      | project Computer, Account, TargetLogonId, LogonTime=TimeGenerated
+      | join kind= inner (
+      SecurityEvent 
+      | where EventID == 4634		// sign-out events
+      | project TargetLogonId, LogoffTime=TimeGenerated
+          ) on TargetLogonId
+      | extend Duration = LogoffTime-LogonTime
+      | project-away TargetLogonId1 
+      | top 10 by Duration desc
+      ```
+    description_ja: NA
+    description_en: Use the join operator to join two queries from the SecurityEvents table together to determine logon duration
+  - title_ja: NA
+    title_en: "Join Heartbeat table with Update Management table to view update status"
+    query: |
+      ```javascript
+      Update
+      | where OSType!="Linux" and Optional==false
+      | summarize hint.strategy=partitioned arg_max(TimeGenerated, *) by Computer,SourceComputerId,UpdateID
+      | where UpdateState=~"Needed" and Approved!=false
+      | join (UpdateSummary 
+      | summarize arg_max(TimeGenerated, *) by Computer, OsVersion, RestartPending
+      | project Computer, OsVersion, RestartPending
+      )
+      on Computer
+      | join ( Heartbeat
+      | summarize LastHeartBeat = arg_max(TimeGenerated, *) by Computer
+      | project LastHeartBeat, Computer
+      ) on Computer
+      | summarize arg_max(TimeGenerated, *), SecurityUpdates = countif(Classification == "Security Updates"), CriticalUpdates = countif(Classification == "Critical Updates"), DefinitionUpdates = countif(Classification == "Definition Updates"), ServicePacks = countif(Classification == "Service Packs"), Others = countif(Classification != "Security Updates" and Classification != "Critical Updates" and Classification != "Definition Updates" and Classification != "Service Packs") by Computer, OsVersion, RestartPending, ResourceId, LastHeartBeat
+      | project Computer, ResourceId, OsVersion, RestartPending, LastHeartBeat, SecurityUpdates, CriticalUpdates, DefinitionUpdates, ServicePacks, Others
+      ```
+    description_ja: NA
+    description_en: Use the join operator to join Heartbeat table to Update Management table to view update status, last heartbeat and reboot status
+  - title_ja: NA
+    title_en: "Join Heartbeat table with syslog table to get count of syslog events"
+    query: |
+      ```javascript
+      Heartbeat 
+      | summarize arg_max(TimeGenerated, *) by Computer, _ResourceId
+      | join (
+      Syslog
+      | summarize SyslogCount = count() by Computer, _ResourceId
+      ) on _ResourceId
+      | project _ResourceId, Computer, ComputerIP, OSName, ResourceGroup, SubscriptionId, SyslogCount
+      ```
+    description_ja: NA
+    description_en: Use the join operator to join Heartbeat table to syslog table to get a count of events per computer 

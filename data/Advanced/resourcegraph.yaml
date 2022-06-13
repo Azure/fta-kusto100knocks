@@ -1,0 +1,231 @@
+category: Advanced
+kind: resourcegraph
+contents:
+    - title_ja:
+        ""
+      title_en:
+        "View subscriptions with no Key Vaults"
+      query: |
+        ```javascript
+        ResourceContainers 
+        | where type=='microsoft.resources/subscriptions'
+        | parse id with "/subscriptions/" SubscriptionID
+        | project subscriptionId, SubscriptionName = name
+        | join kind=leftouter (
+        Resources
+        | where type == 'microsoft.keyvault/vaults'
+        | project id, name, subscriptionId
+        ) on subscriptionId
+        | join kind= leftouter (
+        Resources
+        | where type == 'microsoft.keyvault/vaults'
+        | summarize ResourceCount = count() by subscriptionId
+        ) on subscriptionId
+        | extend RCount = iff(isnull(ResourceCount), 0, ResourceCount)
+        | project-away ResourceCount, subscriptionId1, subscriptionId2
+        | extend HealthStatus = iff(RCount == 1, "Not Compliant", "Compliant")
+        ```
+      description_ja: |
+        NA
+      description_en: |
+        You can use this query in Azure Resource Graph to identify any subscriptions that do not contain KeyVaults.
+    - title_ja:
+        ""
+      title_en:
+        "View status of Azure Monitor Agents for all virtual machines"
+      query: |
+        ```javascript
+        resources
+        | where type == "microsoft.compute/virtualmachines"
+        | project ComputerName = name, subscriptionId
+        | join kind=leftouter  (
+        resources
+        | where type == "microsoft.compute/virtualmachines/extensions"
+        | where name in ("AzureMonitorLinuxAgent", "AzureMonitorWindowsAgent")
+        | parse id with * "/virtualMachines/" ComputerName "/extensions/" *
+        | extend AMAStatus = properties.provisioningState,
+            WorkspaceID = tostring(properties.settings.workspaceId)
+        | project AMA = name, ComputerName, AMAStatus
+        ) on ComputerName
+        | join kind=leftouter  (
+        resources
+        | where type == "microsoft.compute/virtualmachines/extensions"
+        | where name in ("MicrosoftMonitoringAgent", "OmsAgentForLinux")
+        | parse id with * "/virtualMachines/" ComputerName "/extensions/" *
+        | extend MMAStatus = properties.provisioningState,
+            WorkspaceID = tostring(properties.settings.workspaceId)
+        | project MMA = name, ComputerName, MMAStatus, WorkspaceID
+        ) on ComputerName
+        | join kind=leftouter  (
+        resources
+        | where type == "microsoft.operationalinsights/workspaces"
+        | extend WorkspaceID = tostring(properties.customerId)
+        | project WorkspaceName = name, WorkspaceID
+        ) on WorkspaceID
+        | project-away WorkspaceID1, ComputerName1, ComputerName2
+        | extend ["Both Agents"] = iff(isnotempty(AMA) and isnotempty(MMA), "True", "False")
+        ```
+      description_ja: |
+        NA
+      description_en: |
+        You can use this query in Azure Resource Graph to identify which virtual machines have both the Azure Monitor Agent and the Microsoft Monitoring Agent deployed, and which workspace the MMA reports to.
+    - title_ja:
+        ""
+      title_en:
+        "View Orphan Managed disks"
+      query: |
+        ```javascript
+        Resources
+        | where type =~ 'microsoft.compute/Disks'
+        | where managedBy == ""
+        | project name, id
+        ```
+      description_ja: |
+        NA
+      description_en: |
+        You can use this query in Azure Resource Graph to identify any orphaned disks.
+    - title_ja:
+        "NA"
+      title_en:
+        "View Orphaned NICs"
+      query: |
+        ```javascript
+        resources
+        | where type == "microsoft.network/networkinterfaces"
+        | where isnull (properties.virtualMachine) and isnull (properties.privateEndpoint)
+        ```
+      description_ja: |
+        NA
+      description_en: |
+        This query can be used in Azure Resource Graph to identify any detached NIC
+    - title_ja:
+        "NA"
+      title_en:
+        "View Orphaned NSGs"
+      query: |
+        ```javascript
+        resources
+        | where type =~ 'microsoft.network/networksecuritygroups' and isnull(properties.networkInterfaces) and isnull(properties.subnets)
+        | project name, resourceGroup
+        ```
+      description_ja: |
+        NA
+      description_en: |
+        This query can be used in Azure Resource Graph to identify any used Network Security Group
+    - title_ja:
+        "NA"
+      title_en:
+        "View Orphaned Route Tables"
+      query: |
+        ```javascript
+        resources
+        | where type == "microsoft.network/routetables" and isnull(properties.subnets)
+        ```
+      description_ja: 
+        NA
+      description_en:
+        This query can be used in Azure Resource Graph to identify any unused route table
+    - title_ja:
+        "NA"
+      title_en:
+        "Show Storage accounts with public endpoints"
+      query: |
+        ```javascript
+        resources
+        | where type == "microsoft.storage/storageaccounts" and properties.allowBlobPublicAccess == 'true'
+        ```
+      description_ja: 
+        NA
+      description_en:
+        This query can be used in Azure Resource Graph to identify any storage account with public endpoints
+    - title_ja:
+        "NA"
+      title_en:
+        "Show Storage accounts with non-encrypted transfers enabled"
+      query: |
+        ```javascript
+          resources
+          | where type == "microsoft.storage/storageaccounts" and properties.allowBlobPublicAccess == 'true'        
+        ```
+      description_ja: 
+        NA
+      description_en:
+        This query can be used in Azure Resource Graph to identify any storage accounts without an https requirement
+    - title_ja:
+        "NA"
+      title_en:
+        "VNets: Peering Configuration"
+      query: |
+        ```javascript
+        resources
+        | where ['type'] == 'microsoft.network/virtualnetworks'
+        | mv-expand peerings=properties.virtualNetworkPeerings
+        | project VNetName=name, peeringName=peerings.name, peeringTarget=split(peerings.properties.remoteVirtualNetwork.id,"/",8)[0], peeringState=peerings.properties.peeringState,useRemoteGateways=peerings.properties.useRemoteGateways,
+        allowGatewayTransit=peerings.properties.allowGatewayTransit
+        ```
+      description_ja: 
+        NA
+      description_en:
+        Use this query to review the peering configuration of all Virtual Networks in scope
+    - title_ja:
+        "NA"
+      title_en:
+        "Subnet details (NSG/UDR)"
+      query: |
+        ```javascript
+        resources
+        | where ['type'] == 'microsoft.network/virtualnetworks'
+        //| project dynProperties=todynamic(properties)
+        | mv-expand subnetNames=properties.subnets
+        | project VNetName=name, Subnet=subnetNames.name,AddressPrefix=subnetNames.properties.addressPrefix,
+        RouteTable=split(subnetNames.properties.routeTable.id,"/",8)[0],
+        NSG=split(subnetNames.properties.networkSecurityGroup.id,"/",8)[0],type="microsoft.network/subnets"
+        ```
+      description_ja: 
+        NA
+      description_en:
+       This query shows details about the subnets, Addresses, NSGs, UDRs.
+    - title_ja:
+        "NA"
+      title_en: Display count of VMs by Azure location
+      query: |
+        ```javascript
+        Resources | where type == "microsoft.compute/virtualmachines"
+        | summarize Total=count() by Region=location
+        ```
+      description_ja: 
+        NA
+      description_en:
+        Use this query to display a count of VMs by Azure location
+    - title_ja:
+        "NA"
+      title_en: Display a count of VMs by OS Platform
+      query: |
+        ```javascript
+        resources
+        | where ['type'] == 'microsoft.compute/virtualmachines'
+        | project osType=properties.storageProfile.osDisk.osType
+        | summarize count() by tostring(osType)
+        ```
+      description_ja: 
+        NA
+      description_en:
+        Use this query to display a count of VMs by OS Platform
+    - title_ja:
+        <*ASG*> で指定したアプリケーション セキュリティ グループに紐づくネットワーク インターフェースを表示する
+      title_en:
+        List Network Interfaces associated with specific Application Security Group specified as <*ASG*>
+      query: |
+        ```javascript
+        Resources 
+        | where type == "microsoft.network/networkinterfaces"
+        | where isnotnull (properties.ipConfigurations[0].properties.applicationSecurityGroups)
+        | project subscriptionId, resourceGroup, name, ASGs=properties.ipConfigurations[0].properties.applicationSecurityGroups
+        | mv-expand ASGs
+        | project subscriptionId, resourceGroup, name, ASG=ASGs.id
+        | where ASG endswith "<ASG>"
+        ```
+      description_ja: 
+        NA
+      description_en:
+        NA

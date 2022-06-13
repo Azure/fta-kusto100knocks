@@ -1,0 +1,55 @@
+category: Basic
+kind: other
+contents:
+  - title_ja: サービスタグに含まれる IP プレフィックスの一覧を取得する
+    title_en: Obtain a list of IP prefixes contained in the service tag
+    query: |
+      ```javascript
+      let serviceName= "VirtualDesktop";
+      externaldata(changeNumber: string, cloud: string, values: dynamic)["https://download.microsoft.com/download/7/1/D/71D86715-5596-4529-9B13-DA13A5DE5B63/ServiceTags_Public_20220228.json"]  with(format='multijson')
+      | mv-expand values
+      | where values contains serviceName
+      | mv-expand values.properties.addressPrefixes
+      | project addressPrefixes= tostring( values_properties_addressPrefixes)
+      ```
+    description_ja: |
+      Azure のサービスで使われる IP アドレスはサービスタグとして公開されていて、インターネット上から参照することができます。  
+      `externaldata` オペレーターは外部のストレージ アカウントから CSV や JSON などで記述されたデータを取得します。このサンプルでは直接インターネット上からファイルを取得していますが、SAS を使用してあアクセスが制御されているストレージ アカウントからデータを取得することができます。
+
+      注意 - ファイル名 ServiceTags_Public_YYYYMMDD.json は IP リストの更新に伴い変更されるため、次のページから常に新しいファイルを参照する必要があります。  
+      [Azure IP Ranges and Service Tags – Public Cloud](https://www.microsoft.com/en-us/download/details.aspx?id=56519)  
+        
+      KQL で参照するファイルは自身で管理するストレージアカウントに配置し、リストが更新されるたびに自動的にストレージ アカウントのファイルが更新されるような仕組みを考えてください。  
+      [Using external data sources to enrich network logs using Azure storage and KQL](https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/using-external-data-sources-to-enrich-network-logs-using-azure/ba-p/1450345)
+    description_en: |
+      IP addresses used by Azure services are published as service tags and can be referenced from the Internet.
+      The `externaldata` operator retrieves data described in CSV, JSON, etc. from an external storage account. This sample retrieves files directly from the Internet, but SAS can be used to retrieve data from storage accounts to which access is controlled.
+
+      Note - The file name ServiceTags_Public_YYYYYMMDD.json will change as the IP list is updated, so you must always refer to the new file.    
+      [Azure IP Ranges and Service Tags – Public Cloud](https://www.microsoft.com/en-us/download/details.aspx?id=56519)  
+        
+      The files referenced by KQL should be placed in a storage account that you manage yourself, and you should consider a mechanism whereby the files in the storage account are automatically updated whenever the list is updated.
+      [Using external data sources to enrich network logs using Azure storage and KQL](https://techcommunity.microsoft.com/t5/microsoft-sentinel-blog/using-external-data-sources-to-enrich-network-logs-using-azure/ba-p/1450345)
+  - title_ja: 日付や文字列などの計算結果をクイックに確認する
+    title_en: Quickly check the results of calculations for dates, strings, etc.
+    query: |
+      ```javascript
+      print now()
+
+      print now(9h)
+
+      print ago(9h)
+
+      print substring("hello KQL world",6,3)
+
+      print  1 + 2 + 3
+
+      print iif(true, 100 , 200)
+
+      print iif(false, 100 , 200)
+      ```
+    description_ja: |
+      `print` オペレーターはスカラー式（複数の行を持つテーブルを作らない計算）を実行します。時刻や文字列の計算を長いクエリに含める際に、予め部分的に計算結果を確認しておきたいような場合に便利です。
+    description_en: |
+      The `print` operator performs scalar expressions (calculations that do not create a table with multiple rows). It is useful when including time or string calculations in a long query, and you want to see the results of a partial calculation beforehand.
+ 

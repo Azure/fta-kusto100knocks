@@ -1,0 +1,145 @@
+category: Basic
+kind: column
+contents:
+  - title_ja: Heartbeat テーブルから過去 5 分以内にハートビートのあったコンピューターを表示してください、結果には Computer 列と TimeGenerated 列だけを含めてください
+    title_en: Using project to show one or more columns exclusively
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project Computer, TimeGenerated
+
+      ```
+    description_ja: |
+      Heartbeat は Log Analytics エージェントによって送信される健全性の状態が記録されるテーブルです。
+      このテーブルを確認することで、特定の時刻のコンピューターの簡単な死活監視を行うことができます。  
+      `project` 演算子は結果セットの出力を特定の列に絞ることができます。このクエリでは出力結果を Computer 列と TimeGenerated 列に限定しています。出力される列の順番は `project` に渡された引数の順番になり、元のテーブルの順序ではなくなります。  
+      Heartbeat 列はこの他にコンピューターの OS の情報や国などの地理情報も含んでいます。
+    description_en: |
+      This query can be used to select one or more columns to show exclusively in the results (Computer and TimeGenerated).
+  - title_ja: ハートビートを表示する際に、Computer 列を VM に、 TimeGenerated 列を TimeStamp という名前に変更してください
+    title_en: Using project to rename a column
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project VM=Computer, TimeStamp=TimeGenerated
+      ```
+    description_ja: |
+      `project` 演算子は出力列を選択する際に、列の名前を任意の文字列に変更することができます。
+      これにより出力列をわかりやすい名前に変更することができるほか、`join` など列名を参照するようなオペレーターをより簡単に扱うことができます。
+    description_en: |
+      This query can be used to select one or more columns to show exclusively in the results and rename the column(s)
+  - title_ja: 列名を変更する際にスペースを使った列名を指定してください
+    title_en: Using project to rename a column with a name with spaces
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project ['Virtual Machine']=Computer, ['Time Stamp']=TimeGenerated
+      ```
+    description_ja: |
+      見やすさのために列名にスペースを使いたいという場合がありますが、単純に '変更後 列名' = 変更前の列名 のように文字列をクォートで囲むだけではうまくいきません。  
+      括弧 [] で文字列を囲むことで、変更後の列名にスペース入が入った文字列を使用することができます。
+    description_en: |
+      This query can be used to select one or more columns to show exclusively in the results and rename the column(s)
+  - title_ja: 式の利用  - TimeStamp に TimeGenerated に 5 時間を加算した値を設定してください
+    title_en: Using Project and an expression to create columns.
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project VM=toupper(Computer), TimeStamp=datetime_add("Hour",5,TimeGenerated)
+
+      // simplified expression
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project VM=toupper(Computer), TimeStamp= TimeGenerated + 5h
+      ```
+    description_ja: |
+      `project` 演算子は列を選択する際に計算式を適用することができます。このクエリでは datetime_add 関数を使用して、TimeGenerated に ５時間を加えたものを新しい列の値として設定しています。
+    description_en: |
+      This query can be used to created columns based on expressions.
+  - title_ja: ハートビートを表示する際に VMUUID、MG、ManagementGroupName、SourceComputerId 列を出力しないようにしてください
+    title_en: Using project-away to remove columns.
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project-away VMUUID, MG, ManagementGroupName, SourceComputerId
+      ```
+    description_ja: |
+      `project` 演算子は出力する列を選択しますが、`project-away` 演算子は出力しない列を選択します。出力から取り除きたい列が少ない場合にはこの演算子のほうが効率的かもしれません。
+    description_en: |
+      This query can be used to exclude certain columns from the queries
+  - title_ja: Resource という文字列から始まる列を出力から取り除いてください
+    title_en: Using project-away to remove columns based on a pattern
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project-away Resource*
+      ```
+    description_ja: |
+      `project-away` 演算子は特定のパターンを含む列を除外することができます。ワイルドカード文字を使用して、例えば ABC* を `project-away` に渡すと 「ABC から始まる列は除く」という意味になります。
+    description_en: |
+      This query can be used to exclude certain columns from the queries and exclude columns that match the pattern
+  - title_ja: |
+      project-keep 演算子を使用して Resource という文字列から始まる列だけを出力してください
+    title_en: Using project-keep to select which columns to show in the results.
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project-keep Resource*
+      ```
+    description_ja: |
+      `project-keep` 演算子は `project` と同じように列の選択を行います。結果の列の順序はテーブルの素の順序に従うという点が `project` との大きな違いです。
+    description_en: |
+      This query can be used to select columns to be shown in the output. Can't be used to create expression based columns. See `project` for that purpose.
+  - title_ja: project-reorder 演算子を使用して列を並び替えてください
+    title_en: Using project-reorder to establish the order of the columns.
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project-reorder * desc
+      ```
+    description_ja: |
+      出力結果の列は `project-reorder` 演算子で並び替えることができます。この例では全ての列を降順に並び替えています。
+    description_en: |
+      This query example shows how to reorder (all) columns in descendant fashion
+  - title_ja:  project-rename 演算子を使用して列名を変更してください
+    title_en: Using project-rename to change a column's name.
+    query: |
+      ```javascript
+      Heartbeat 
+      | where TimeGenerated > ago (5m)
+      | project-rename VM=Compute
+      ```
+    description_ja: |
+      `project-rename` 演算子は列名を変更することができます。`project` でも列名の変更はできますが、`project-rename` は他の列のフィルタリングには影響を与えずに、特定の列の名前だけを変更することができます。
+    description_en: |
+      This query shows how to rename one or more columns in the results. Project-rename won't affect filtering over columns.
+  - title_ja: 計算結果を持つ新しい列を追加してください
+    title_en: Using Extend to create calculated columns
+    query: |
+      ```javascript
+      Heartbeat
+      | extend
+          Age = now() - TimeGenerated
+      ```
+    description_ja: |
+      `extend` 演算子は計算列を作成し、結果セットに追加します。この例では現在時刻とログが生成された時刻の差分を計算した新しい列を追加しています。
+    description_en: This query can be used to create a new column based on an expression
+  - title_ja: 新しい列を追加し、5 分より新しいレコードには✔️を、古いレコードには❌を設定してください
+    title_en: Using Extend to create calculated columns using a condition (and visuals)
+    query: |
+      ```javascript
+      Heartbeat
+      | summarize LastReported=now()-max(TimeGenerated) by Computer,TimeGenerated
+      | extend RecentHeartBeat=iff(TimeGenerated > ago(5m),'✔️ ', '❌ ')
+      ```
+    description_ja: |
+      `iif` 関数は最初の引数が true であれば ２番目の引数を、false であれば 3 番目の引数の結果を返します。２番目や３番目の引数には計算式を持つこともでき、条件に応じてより複雑な処理を行うこともできます。
+    description_en: This query can be used to create a new column based on a condition and display a visual clue.

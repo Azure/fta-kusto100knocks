@@ -1,0 +1,184 @@
+category: Basic
+kind: datetime
+contents:
+  - title_ja: 現在の日付を UTC 時間で表示してください
+    title_en: Display the current date in UTC time
+    description_ja: |
+      現在の時刻は、`now()` 関数を使用すると取得できます。`now()` 関数を含む日付や時刻に関する関数が返す値は、`datetime`型となり Kusto では UTC 時間で表されます。`datetime`型のデータは、テーブルの時刻列(`TimeGenerated`)等で使用されており、フィルターやソートなどに使えます。
+    description_en: |
+      The current time can be obtained using the `now()` function. The return value of any date or time function, including the `now()` function, is of type `datetime` and is expressed in UTC time in Kusto.
+    query: |
+      ```javascript
+      print now()
+      ```
+  - title_ja: 特定の日時("2022年1月1日 12:00")を UTC 時間で表示してください
+    title_en: Display a specific date and time ("January 1, 2022 12:00") in UTC time
+    description_ja: |
+      `datetime`関数を使うと文字列を指定して日付や時刻を取得できます。`datetime` 関数の戻り値は`datetime`型として取得できます。
+    description_en: |
+      The `datetime` function allows you to retrieve a date or time by specifying a string. The return value of the `datetime` function can be obtained as type `datetime`.
+    query: |
+      ```javascript
+      print datetime("2022-01-01 12:00")
+      ```
+  - title_ja: 特定の日時("2022年1月1日 12:00")を UTC+9 時間で表示してください
+    title_en: Display a specific date and time ("January 1, 2022, 12:00") in UTC+9 hours. 
+    description_ja: |
+      `datetime` 関数で返される `datetime` 型は UTC 時間で扱われます。タイムゾーンを意識した日付を扱う場合、ユーザーがタイムゾーンを指定する必要があります。UTC 時間を他のタイムゾーンに変更するには、その時間を`datetime`型の値に足します(もしくは引きます)。`datetime`型に対する足し引きは、`timespan`型の値を使います。このクエリのように、`9h`(9時間)や`30m`(30分)のような表記を使用します。
+    description_en: |
+      The `datetime` type returned by the `datetime` function is treated in UTC time. To change UTC time to another time zone, add (or subtract) the time to the value of type `datetime`. To add to or subtract from a `datetime` type, use a value of type `timespan`. Use notation such as `9h` (9 hours) or `30m` (30 minutes), as in this query.
+    query: |
+      ```javascript
+      print datetime("2022-01-01 12:00") + 9h
+      ```
+  - title_ja: 現在の日時の 30 分前の日時を UTC+9 時間で表示してください
+    title_en: Display the date and time 30 minutes before the current date and time in UTC+9 hours
+    description_ja: |
+      `datetime` 型に対する足し引きを使うことで、過去や未来の時間を指定できます。`datetime`型に対する足し引きは、`timespan`型の値が使えます。
+    description_en: |
+      You can specify a time in the past or future by adding or subtracting against the `datetime` type. Addition to or subtraction from a `datetime` type can use values of type `timespan`.
+    query: |
+      ```javascript
+      print datetime("now") + 9h - 30m
+      ```
+  - title_ja: UTC 時間で特定の期間("2022年1月1日"の 1 日のみ)のレコードを検索してください
+    title_en: Search for records in UTC time for a specific period of time (only one day, "January 1, 2022")
+    description_en: |
+      When checking logs output by Azure services for troubleshooting, etc., you may want to check logs for a specific day. You can use the `between` and `datetime` functions in combination for a `TimeGenerated` column to limit the time range.
+    description_ja: |
+      トラブルシューティング等で Azure の各サービスが出力するログを確認する際、特定の 1 日のログを確認したいことがあります。`TimeGenerated` 列に対して、`between`関数と`datetime`関数を組み合わせて使用することで時間の範囲を限定できます。
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated between (datetime("2022-01-01 00:00:00")..1day)
+      ```
+  - title_ja: UTC 時間で特定の期間("2022年1月1日 00時00分00秒"から"2022年1月2日 23時59分59秒"まで)のレコードを検索してください
+    title_en: Search for records in UTC time for a specific period of time ("January 1, 2022" to "January 2, 2022")
+    description_ja: |
+      `between`関数の範囲の始まりと終わりに、`datetime`関数を使用すると`datetime`関数に指定した日時を範囲とすることができます。
+    description_en: |
+      The `datetime` function can be used at the beginning and end of the range of the `between` function to make the range include a specific date and time.
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated between (datetime("2022-01-01 00:00:00")..datetime("2022-01-02 23:59:59"))
+      ```
+  - title_ja: UTC 時間で特定の期間("2022年1月1日 12時00分"から"2022年1月2日 12時59分"まで)のレコードを検索してください
+    title_en: Search for records in UTC time for a specific period of time ("January 1, 2022 12:00" to "January 2, 2022 12:00")
+    description_ja: |
+      `between`関数の範囲の始まりと終わりに、`datetime`関数を使用すると`datetime`関数に指定した日時を範囲とすることができます。`datetime`関数の引数にはさまざまな日付表現を指定できます。
+    description_en: |
+      At the beginning and end of the range of the `between` function, the `datetime` function can be used to specify a range of dates and times for the `datetime` function. The `datetime` function accepts a variety of date expressions as arguments.
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated between (datetime("2022-01-01 12:00")..datetime("2022-01-02 12:59"))
+      ```
+  - title_ja: UTC 時間で今日(0時0分から今の時刻まで)のレコードを検索してください
+    title_en: Search today's records in UTC time
+    description_ja: |
+      `TimeGenerated`型に対して比較演算子を使うことで、さまざまな時間の範囲の表現ができます。`startofday`関数は引数に指定された日付の開始日時を表す`datetime`型の値を返します。つまり、"2022-01-01 12:34" は、"2022-01-01 0:00:00.000" を表します。
+    description_en: |
+      Comparison operators can be used on the `TimeGenerated` type to represent different ranges of time. The `startofday` function returns a value of type `datetime` representing the start of the date given as argument. That is, "2022-01-01 12:34" represents "2022-01-01 0:00:00.000".
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > startofday(now())
+      ```
+  - title_ja: UTC 時間で今週(日曜日から今の時刻まで)のレコードを検索してください
+    title_en: Find this month's record in UTC time
+    description_ja: |
+      `TimeGenerated`型に対して比較演算子を使うことで、さまざまな時間の範囲の表現ができます。`startofweek`関数は引数に指定された日付の週の開始日時を表す`datetime`型の値を返します。つまり、"2022-01-01 12:34" は、"2021-12-26 0:00:00.000" を表します。
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > startofweek(now())
+      ```
+  - title_ja: 3日前から現時点までのレコードを検索してください
+    title_en: Search records from 3 days ago to the present
+    description_ja: |
+      `ago` 関数を使用すると現在の時刻から指定した日時前を表す`datetime`型の値を返します。つまり、`ago(3d)` は、現在の時刻から3日前の時刻を表します。日付以外にも、`1m`や`1h`などの時間単位を指定できます。
+    description_en: |
+      The `ago` function returns a value of type `datetime` representing the specified date and time before the current time. That is, `ago(3d)` represents the time three days before the current time. In addition to dates, you can specify other time units such as `1m` or `1h`!
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > ago(3day)
+      ```
+  - title_ja: 過去30分間のレコードを検索してください
+    title_en: Search for records in the last 30 minutes
+    description_ja: |
+      大きな時間範囲でクエリを実行すると実行時間が長くなります。Azure Firewall の診断ログや OS のパフォーマンスログ等大量にログが発生し得るテーブルを対象にする場合は、可能な限り時間範囲を絞った上でクエリを実行することを心がけてください。
+    description_en: |
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > ago(30m)
+      ```
+  - title_ja: 過去1.5時間のレコードを検索してください
+    title_en: Search records for the past 1.5 hours
+    description_ja: |
+      `timespan`型はさまざまな表現が出来ます。このクエリのように小数点を表すこともできます。
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > ago(1.5h)
+      ```
+  - title_ja: 2日前から3日前までのレコードを検索してください
+    title_en: Search records from 2 to 3 days ago
+    description_ja: |
+      `now`関数には、引数で`timespan`型のオフセットを指定できます。`between`関数と組み合わせるとさまざまな時間範囲の表現ができます。このクエリは `now(-3d)` を `ago(3d)` としても同じ結果になります。
+    description_en: |
+      The `now` function accepts an offset of type `timespan` as an argument. When combined with the `between` function, various time ranges can be represented. This query produces the same result as `now(-3d)` as `ago(3d)`.
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated between (now(-3d)..1day)
+      ```
+  - title_ja: ローカルのタイムゾーン(UTC+9h)で今日のレコードを検索してください
+    title_en: Search by local time zone
+    description_ja: |
+      `TimeGenerated`や`startofday`関数は、UTC時間で表現されます。従って、ローカル時間でフィルターする場合はタイムゾーンを考慮する必要があります。
+    description_en: |
+      The `TimeGenerated` and `startofday` functions are expressed in UTC time. Therefore, time zone must be taken into account when filtering by local time.
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > startofday(now()) - 9h
+      ```
+  - title_ja: レコードの時刻と現在時刻の差をカラムとして追加してください
+    title_en: Add the difference between the time of record and the current time as a column
+    description_ja: |
+      アクセスログ等が含まれるテーブルにおいて、レコードの時刻と現在時刻の差を確認したいことがあります。`extend` と時刻関数を使用すると新たにカラムを追加し、時刻差を出力できます。
+    description_en: |
+      In a table containing access logs, etc., you may want to check the difference between the time of the record and the current time. Using `extend` and the time function, you can add a new column and output the time difference.
+    query: |
+      ```javascript
+      Alert
+      | where TimeGenerated > ago(30m)
+      | extend timeAgo = now() - TimeGenerated 
+      ```
+  - title_ja: 1週間分(日曜日から今の時刻まで)のレコードを1日単位でグループ化し、1日当たりのレコード件数を表示してください
+    title_en: Group the records for the week (from Sunday to the current time) by day and display the number of records per day
+    description_ja: |
+      `summarize`関数は時刻関数と組み合わされることがよくあります。アクセスログを集計する際等に利用すると便利です。
+    description_en: |
+      The `summarize` function is often combined with the time function. It is useful when aggregating access logs, for example.
+    query: |
+      ```javascript
+      AzureDiagnostics
+      | where TimeGenerated > startofweek(now())
+      | summarize count() by startofday(TimeGenerated)
+      ```
+  - title_ja: 過去30分のレコードを1分単位でグループ化し、1分当たりのレコード件数を表示してください
+    title_en: Group records from the past 30 minutes by minute and display the number of records per minute
+    description_ja: |
+      `summarize`関数と`bin`関数、時刻関数を組み合わせると日付に対してより柔軟な集計が出来ます。`bin`関数は`floor`関数(床関数)のエイリアスです。
+    description_en: 
+      Combining the `summarize` function with the `bin` function and the time function allows more flexible aggregation for dates. The `bin` function is an alias for the `floor` function.
+    query: |
+      ```javascript
+      AzureDiagnostics
+      | where TimeGenerated >= ago(30m)
+      | summarize count() by bin(TimeGenerated, 1m)
+      ```
