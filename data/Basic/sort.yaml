@@ -1,0 +1,163 @@
+category: Basic
+kind: sort
+contents:
+  - title_ja: summarize 演算子を使用して、InsightsMetrics テーブルに収集されているパフォーマンス カウンターの数をコンピューターごとに集計してください
+    title_en: Count the number of performance counters collected per computer
+    query: |
+      ```javascript
+      InsightsMetrics
+      | summarize count() by Computer, Namespace, Name
+      ```
+    description_ja: |
+      `summarize` 演算子は入力されたテーブルを様々な形に集計することができます。集計の種類は引数の集計関数で指定することができ、`count()` は単純にレコードの数を数える集計関数です。
+      集計の単位は by に続く列名で指定することができ、この例では Computer と Namespace の組み合わせに対して集計を行っています。  
+      InsightsMetrics は (従来の Log Analytics エージェントによって収集される Perf ではなく) VM Insights によって収集されるパフォーマンス カウンターを格納するためのテーブルです。
+    description_en: Count the number of performance counters collected per computer
+  - title_ja: コンピューターごとに何種類のパフォーマンス カウンターがあるかを集計してください
+    title_en: Please tally how many different performance counters are available for each computer
+    query: |
+      ```javascript
+      InsightsMetrics 
+      | summarize dcount(Name) by Computer
+      ```
+    description_ja: |
+      `dcount()` 関数は与えられた列の中で、ユニークな値が何個あるかを計算する集計関数です。この例ではコンピューターから収集されるパフォーマンス カンターの名前ですが、ユーザーがログインしている場所の数、コンピューターが接続したことのある IP の数など、様々な集計に使うことができます。
+    description_en: |
+      The `dcount()` function is an aggregate function that calculates the number of unique values in a given column. In this example it is the name of the performance counters collected from the computer, but it can be used for a variety of aggregates, such as the number of locations where a user is logged in, the number of IPs to which the computer has ever connected, etc.
+  - title_ja: UtilizationPercentage の平均値をコンピューターごとに集計してください
+    title_en: Please tabulate the average UtilizationPercentage of the computers
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Name == "UtilizationPercentage"
+      | summarize avg(Val) by Computer
+      ```
+    description_ja: |
+      `summarize` 演算子に与える集計関数を変えることで集計方法が変わります。`avg()` 関数に対象とする列名を与えることで、列の値の平均値を計算することができます。
+    description_en: |
+      Changing the aggregation function given to the `summarize` operator changes the aggregation method. By giving the target column name to the `avg()` function, you can compute the average of the column values.
+  - title_ja: UtilizationPercentage の最大値をコンピューターごとに集計してください
+    title_en: Tabulate the average UtilizationPercentage of the computers
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Name == "UtilizationPercentage"
+      | summarize max(Val) by Computer
+      ```
+    description_ja: |
+      `max()` 関数に対象とする列名を与えることで、列の値の最大値を計算することができます。
+    description_en: |
+      You can compute the maximum value of a column value by giving the target column name to the `max()` function.
+  - title_ja: UtilizationPercentage の最小値をコンピューターごとに集計してください
+    title_en: Please provide an hourly trend of the average UtilizationPercentage by computer.
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Name == "UtilizationPercentage"
+      | summarize min(Val) by Computer
+      ```
+    description_ja: |
+      `min()` 関数に対象とする列名を与えることで、列の値の最小値を計算することができます。
+    description_en: |
+      You can compute the maximum value of a column value by giving the target column name to the `min()` function.
+  - title_ja: UtilizationPercentage の平均値の 1 時間ごとの推移をコンピューターごとに集計してください
+    title_en: Please tabulate the average UtilizationPercentage of the computers
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Name == "UtilizationPercentage"
+      | summarize avg(Val) by Computer, bin(TimeGenerated, 1h)
+      ```
+    description_ja: |
+      `summarize` 演算子の集計は複数の列に対して行うことができます。この例は非常によく使われるパターンで、注目したいリソースと時間に対して集計を行うことで、特定のリソースのふるまいを時系列で集計することができます。
+      単純に TimeGenerated を使った場合には単位が細かすぎてしまうので、`bin()` 関数を使って丸めるのが一般的です。例では 1 時間単位に丸めていますが、10 分 (10m) 、100 秒 (100s) といった丸め方もできます。
+    description_en: |
+      Aggregation with the `summarize` operator can be performed on multiple columns. This is a very common pattern, and allows you to aggregate the behavior of a particular resource over time by summing over the resource and time of interest.
+      If you simply use TimeGenerated for aggregation, the units will be too fine, so it is common to round up using the `bin()` function. The example rounds to the nearest hour, but you can also round to the nearest 10 minutes (10m), 100 seconds (100s), etc.
+
+  - title_ja: 容量の少ないディスクを 10 個表示してください
+    title_en: Show top logic disks running out of space
+    query: |
+      ```javascript
+      InsightsMetrics 
+      | where Namespace == "LogicalDisk" and Name == "FreeSpacePercentage"
+      | extend DiskInstance = tostring(parse_json(Tags).["vm.azm.ms/mountId"])
+      | summarize FreeDiskSpace = avg(Val) by Computer, DiskInstance
+      | order by FreeDiskSpace asc 
+      | take 10
+      
+      ```
+    description_ja: |
+      ディスクの空き容量を表すパフォーマンス カウンターの名前は `FreeSpacePercentage` です。この例では集計した時間帯の `FreeSpacePercentage` の平均値が最も小さいディスクを 10 個選択しています。  
+      InsightsMetrics テーブルではボリュームのラベルは直接値としては列に現れず、JSON データとして Tags 列に含まれています。
+      このため `parse_json` 関数を使用して Tags 列を解析して取得したボリュームのラベルの値を `extend` 演算子により新たな列の値として設定しています。
+
+    description_en: |
+      The name of the performance counter for free disk space is `FreeSpacePercentage`. This example selects the 10 disks with the lowest average `FreeSpacePercentage` for the aggregated time period.
+      In the InsightsMetrics table, volume labels do not appear directly in the columns as values, but are included in the Tags column as JSON data.
+      For this reason, the `parse_json` function is used to parse the Tags column and set the label values of the retrieved volume as new column values with the `extend` operator.
+
+  - title_ja: 空き容量が閾値 (20 %) 以下のロジックディスクを表示してください
+    title_en: Show logic disks that are below the free space threshold
+    query: |
+      ```javascript
+      let threshold = 20;
+      InsightsMetrics 
+      | where Namespace == "LogicalDisk" and Name == "FreeSpacePercentage"
+      | extend DiskInstance = tostring(parse_json(Tags).["vm.azm.ms/mountId"])
+      | summarize FreeDiskSpace = avg(Val) by Computer, DiskInstance
+      | where FreeDiskSpace < threshold
+      ```
+    description_ja: |
+      空き容量が一定の値以下のディスクを表示しています。この例では閾値となる数値を threshold という名前の変数に格納しています。  
+      変数を使用することで変更、再利用が容易で、わかりやすいクエリにすることができます。
+
+    description_en: |
+      Displays disks whose free space is below a certain value. In this example, the threshold value is stored in a variable named threshold.
+      Variables can be used to make the query easy to modify, easy to reuse, and easy to understand.
+      
+  - title_ja: NA
+    title_en: "Count the number of events collected per computer"
+    query: |
+      ```javascript
+      Event 
+      | summarize count() by Computer
+      ```
+    description_ja: コンピュータごとに収集したイベント数をカウントする
+    description_en: Count the number of events collected per computer
+  - title_ja: コンピュータごとに収集されたイベント数を時系列でカウントする
+    title_en: Count the number of events collected per computer over time
+    query: |
+      ```javascript
+      Event 
+      | summarize count() by bin(TimeGenerated, 1h), Computer
+      
+      ```
+    description_ja: コンピュータごとに収集したイベント数を1時間のタイムバケットに集約してカウントする
+    description_en: Count the number of events collected per computer, aggregated into 1 hour time buckets
+
+  - title_ja: コンピュータの収集イベントトップ10を表示
+    title_en: Show top 10 computers collecting events
+    query: |
+      ```javascript
+      Event 
+      | summarize count() by Computer
+      | top 10 by Computer
+      
+      ```
+    description_ja: コンピュータごとに収集したイベント数をカウントし、イベントを収集している上位10台のコンピュータを表示します。
+    description_en: Count the number of events collected per computer, and then display the top 10 computers collecting events
+
+  - title_ja: 全マシンのトッププロセスを表示
+    title_en: Show top processes across all machines
+    query: |
+      ```javascript
+      Perf 
+      | where ObjectName == "Process" and CounterName == "% Processor Time"
+      | summarize AverageValue = avg(CounterValue) by InstanceName
+      | top 10 by InstanceName
+      | order by AverageValue
+      
+      ```
+    description_ja: 全サーバーにおけるプロセスの `% Processor` をまとめ、上位10位までをリストアップしてください。
+    description_en: Summarize the `% Processor` Utilisation for processes across all servers, and list the top 10

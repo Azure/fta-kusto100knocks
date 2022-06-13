@@ -1,0 +1,55 @@
+category: Advanced
+kind: compute
+contents:
+  - title_ja: コンピュータごとに最後のハートビートを取得する
+    title_en: Get the last heartbeat per computer
+    query: |
+      ```javascript
+      Heartbeat 
+      | summarize LastHeartBeat = arg_max(TimeGenerated, *) by Computer
+      ```
+    description_ja: Microsoft 監視エージェントがコンピューターに展開されている場合、1 分ごとにハートビートを送信します。このクエリを使用すると、各コンピュータから送信された最後のハートビートを確認できます。
+    description_en: If the Microsoft Monitoring agent is deployed to a computer, it sends a heart beat every minute. With this query, you can see the last heart beat sent by each computer.
+  - title_ja: 5分間ハートビートを送っていないコンピュータを取得する
+    title_en: See computers that have not sent a heart beat in 5 minutes
+    query: |
+      ```javascript
+      Heartbeat 
+      | summarize LastHeartBeat = arg_max(TimeGenerated, *) by Computer
+      | where LastHeartBeat < ago(5m)
+      ```
+    description_ja: 5分間ハートビートを送っていないコンピュータを取得する
+    description_en: See computers that have not sent a heart beat in 5 minutes
+  - title_ja: 過去 4 時間に集計されたすべてのコンピュータのディスク空き容量の割合を確認する
+    title_en: See the % Free Disk Space for all computers aggregated over the last 4 hours
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where TimeGenerated > ago(4h)
+      | where Namespace == "LogicalDisk"
+      | where Name == "FreeSpacePercentage"
+      | extend DiskInstance = tostring(parse_json(Tags).["vm.azm.ms/mountId"])
+      | summarize DiskFreeSpace = avg(Val) by bin(TimeGenerated, 4h), Computer, DiskInstance
+      ```
+    description_ja: VM インサイトを使用する場合、すべてのパフォーマンス カウンターがインサイト メトリック テーブルに収集されます。このクエリは、過去 4 時間に集計されたすべてのディスクの空き領域の割合を示します。
+    description_en: When using VM Insights, all performance counters are collected into the Insight Metrics table. This query shows the % Free space across all disks aggregated for the last 4 hours
+  - title_ja: すべてのコンピュータの更新管理の最新の状態を表示する
+    title_en: Show latest status from Update Management for all computers
+    query: |
+      ```javascript
+      UpdateSummary 
+      | summarize arg_max(TimeGenerated, *) by Computer
+      | project Computer, LastUpdateApplied, OldestMissingSecurityUpdateInDays, WindowsUpdateSetting, SecurityUpdatesMissing, OtherUpdatesMissing, RestartPending
+      ```
+    description_ja: 更新の管理を使用する場合は、このクエリを使用して、各コンピュータの最新の状態を表示できます。
+    description_en: If using Update Management, you can use this query to show the latest status for each computer, including how many updates are missing for each computer
+  - title_ja: 過去 7 日間の各更新ジョブの状態を表示します
+    title_en: Show the status of each Update job for the last 7 days
+    query: |
+      ```javascript
+      UpdateRunProgress
+      | where TimeGenerated > ago(7d)
+      | summarize Failed = countif(InstallationStatus == "Failed"), FailedtoStart = countif(InstallationStatus == "FailedtoStart"), InProgress = countif(InstallationStatus == "InProgress"), Succeeded = countif(InstallationStatus == "Succeeded"), NotIncluded = countif(InstallationStatus == "NotIncluded"), NotStarted = countif(InstallationStatus == "NotStarted") by UpdateRunName
+      ```
+    description_ja: このクエリを使用して、過去 7 日間の各更新ジョブの各ステータスの更新数を確認します。
+    description_en: Use this query to see the number of updates in each status for each update job for the last 7 days

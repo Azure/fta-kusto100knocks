@@ -1,0 +1,57 @@
+category: Basic
+kind: format
+contents:
+  - title_ja: リソースID を解析する
+    title_en: Parse a resource ID
+    query: |
+      ```javascript
+      AzureDiagnostics
+      | where ResourceType == "SERVERS/DATABASES"
+      | parse ResourceId with * "/RESOURCEGROUPS/" ResourceGroupName "/" * "/DATABASES/" Databasename
+      | project TimeGenerated, Category, OperationName, ResourceGroupName, Databasename 
+      ```
+    description_ja: |
+      `parse` オペレーターを使用して、リソース ID フィールドからリソースグループとリソー ス名を抽出します。
+    description_en: |
+      Use the `parse` operator to extract the resource group and resource name from the resource id field
+
+  - title_ja: syslogの文字列を解析する
+    title_en: Parse a string in syslog
+    query: |
+      ```javascript
+      Syslog 
+      | where Facility == "authpriv"
+      | parse SyslogMessage with * "(" session "):" * "user" UserName
+      ```
+    description_ja: |
+      ログの文字列エントリから一貫して文字列値を抽出するには、`parse` コマンドを使用します。
+    description_en: |
+      Use the `parse` command to extract a string value consistently from a log string entry
+
+  - title_ja: クエリから特定の列を返す
+    title_en: Return specific columns from a query
+    query: |
+      ```javascript
+      VMComputer 
+      | summarize arg_max(TimeGenerated, *) by Computer
+      | extend IPAddress = tostring(Ipv4Addresses[0])
+      | extend DNSNAme = tostring(DnsNames[0])
+      | project Computer, BootTime, IPAddress, DNSNAme, OperatingSystemFullName, PhysicalMemoryMB, Cpus, CpuSpeed, AzureResourceGroup, AzureSubscriptionId
+      ```
+    description_ja: |
+      `project` 演算子を使用して、クエリの列を特定することができます。
+    description_en: |
+      Use the `project` operator to return very specific columns from a query
+
+  - title_ja: クエリ結果から特定のカラムを除外する
+    title_en: Exclude a specific column from the query result
+    query: |
+      ```javascript
+      SecurityEvent
+      | summarize count() by EventID, Activity
+      | project-away EventID
+      ```
+    description_ja: |
+      クエリ結果から特定のカラムを除外するには、`project-away `演算子を使用します。
+    description_en: |
+      Use the `project-away` operator to exclude a specific column from the query result

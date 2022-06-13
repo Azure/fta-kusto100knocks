@@ -1,0 +1,110 @@
+category: Advanced
+kind: appinsights
+contents:
+  - title_ja:
+      "過去12時間のリクエストを集計してください"
+    title_en:
+      "Count request within past 12 hours"
+    query: |
+      ```javascript
+      requests
+      | where timestamp > ago(12h) 
+      ```
+    description_ja: |
+      `requests` テーブルは、Application Insights で収集したHTTPリクエストのテーブルです。
+    description_en: |
+      The 'requests' table is a table of HTTP requests collected in Application Insights.
+
+  - title_ja:
+      "過去12時間の失敗したリクエストを集計してください"
+    title_en:
+      "Count failed request within past 12 hours"
+    query: |
+      ```javascript
+      requests
+      | where timestamp > ago(12h) 
+      | where success == false
+      ```
+    description_ja: |
+      `requests` テーブルの中には、`sucess` という `boolean` 型の行があります。 `success` を `false` に設定することによって失敗したリクエストを集計することができます。
+    description_en: |
+      In the 'requests' table, there is a row of type 'boolean' called 'success'. You can aggregate failed requests by setting 'sucess' to 'false'.
+
+  - title_ja:
+      "リクエストのパフォーマンスを平均、50、95、99パーセンタイルで集計してください"
+    title_en:
+      "Count performance with requests and summaize avarage, 50, 95, 99 percentile"
+    query: |
+      ```javascript
+      requests
+      | summarize RequestsCount=sum(itemCount), AverageDuration=avg(duration), percentiles(duration, 50, 95, 99) by operation_Name
+      ```
+    description_ja: |
+      `requests` テーブルの中には、`duration` という 返答にかかった時間を表すデータがあります。 `avg` を使えば平均を、`percentiles` を使えばパーセンタイルでの集計が可能です。
+    description_en: |
+      In the 'requests' table, there is data that represents the time it took to respond 'duration'. You can use 'avg' to aggregate averages and 'percentiles' to aggregate in percentiles.
+
+  - title_ja:
+      "リクエストからアクセス元の国トップ10を表示してください"
+    title_en:
+      ""
+    query: |
+      ```javascript
+      requests
+      | summarize CountByCountry=count() by client_CountryOrRegion
+      | top 10 by CountByCountry
+      | render piechart
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      NA
+ 
+
+ 
+  - title_ja:
+      "ページビューのデータを表示してください"
+    title_en:
+      "Show page view data"
+    query: |
+      ```javascript
+      pageViews
+      ```
+    description_ja: |
+      ページビューを集計するためには、`pageViews` のテーブルを使います。
+    description_en: |
+      To aggregate pageviews, use the table in 'pageViews'.
+ 
+  - title_ja:
+      "ブラウザから参照されるページビューのデータを表示してください"
+    title_en:
+      "Show page view from browser data"
+    query: |
+      ```javascript
+      pageViews
+      | where client_type == 'Browser'
+      ```
+    description_ja: |
+      `pageViews` テーブルの中に `client_type` のデータがあります。`where` 句を使い `client_type` を Browser に絞ることでブラウザから参照されるデータを抽出できます。
+    description_en: |
+      NA
+
+  - title_ja:
+      "ブラウザから参照されるページビューのデータを使い、処理にかかった時間を集計し、トップ10とその平均値を表示してください。"
+    title_en:
+      ""
+    query: |
+      ```javascript
+      pageViews
+      | where notempty(duration) and client_Type == 'Browser'
+      | extend total_duration=duration*itemCount
+      | summarize avg_duration=(sum(total_duration)/sum(itemCount)) by operation_Name
+      | top 10 by avg_duration desc
+      ```
+    description_ja: |
+      `where` 句で `duration` が空でないものでかつブラウザからのアクセスのものを区切り、`extend` 句で処理時間の合計値として `total_duration` を計算します。
+      `sumamrize` 句で アクセスディレクトリのデータである `operation_Name` 事に平均処理時間を出します。最後に `top` 句を使い平均処理時間のトップ10を出し `desc` で並べかえます。
+    description_en: |
+
+
+      NA

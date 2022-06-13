@@ -1,0 +1,244 @@
+kind: AVD
+contents:
+- title_ja:
+    AVD の診断ログが格納されているテーブルを一覧で表示
+  title_en:
+    List all tables related to AVD
+  query: |
+    ```javascript
+    search * 
+    | where TimeGenerated > ago(24h)
+    | distinct $table
+    | where $table startswith "WVD"
+    ```
+  description_ja: |
+    AVD に関連する診断ログは用途毎に別々のテーブルに出力されます。ここでは AVD に関連するテーブルの一覧（ログが 24 時間以内に出力されたものに限る）を表示しています。
+    AVD の診断ログについては以下のドキュメントを参照ください。  
+    https://docs.microsoft.com/ja-jp/azure/virtual-desktop/diagnostics-log-analytics
+  description_en: |
+    Diagnostic logs related to AVD are sent out to separate tables for each type. This query lists the all tables related to AVDs (logs must have sent within the last 24 hours).
+    For more information for diagnostic logs for AVD  
+    https://docs.microsoft.com/ja-jp/azure/virtual-desktop/diagnostics-log-analytics
+
+- title_ja:
+    過去 24 時間のアクティブなセッション数の推移を 5 分刻みでグラフ化
+  title_en:
+    Display changes in number of active sessions in 5 minute intervals in the last 24 hours
+  query: |
+    ```javascript
+    WVDAgentHealthStatus
+    | where TimeGenerated > ago(24h)
+    | summarize TotalActiveSessions=sum(toint(ActiveSessions))/10 by bin(TimeGenerated, 5m)
+    | render timechart 
+    ```
+  description_ja: |
+    AVD Agent は 30 秒おきにホスト上のアクティブなセッション数などのステータス情報を 'WVDAgentHealthStatus' テーブルに送信しています。 
+    このクエリはアクティブなセッションの数を sum() 関数により集計してグラフ化しています。
+  description_en: |
+    AVD Agent send various status information including the number of active sessions every 30 seconds to 'WVDAgentHealthStatus' table.
+    This query display changes in number of inactive sessions (e.g. press 'x' button to close the window but the session remains) aggregated by sum() function.
+
+- title_ja:
+    過去 24 時間のインアクティブなセッション数の推移を 5 分刻みでグラフ化
+  title_en:
+    Display changes in number of inactive sessions in 5 minute intervals in the last 24 hours
+  query: |
+    ```javascript
+    WVDAgentHealthStatus
+    | where TimeGenerated > ago(24h)
+    | summarize TotalInactiveSessions=sum(toint(InactiveSessions))/10 by bin(TimeGenerated, 5m)
+    | render timechart 
+    ```
+  description_ja: |
+    インアクティブ（ユーザーが x ボタンで閉じるなどしてアクティブではないがセッションが残っているもの）なセッション数を sum() 関数により集計してグラフ化しています。
+  description_en: |
+    Display changes in number of inactive sessions (e.g. press 'x' button to close the window but the session remains) aggregated by sum() function
+
+- title_ja:
+    セッションホスト毎のアクティブとインアクティブなセッション数を表示
+  title_en:
+    List the number of active/inactive sessions per session-hosts
+  query: |
+    ```javascript
+    WVDAgentHealthStatus
+    | where TimeGenerated > ago(10m)
+    | summarize arg_max(TimeGenerated,*) by SessionHostName
+    | project SessionHostName, ActiveSessions, InactiveSessions, TimeGenerated
+    ```
+  description_ja: |
+    現時点（過去 10 分以内）で正常稼働しているセッションホストから、アクティブ／インアクティブなセッション数をホスト毎に表示
+  description_en: |
+    List the number of active/inactive sessions from currently (at least last 10 mins) available session-hosts
+
+- title_ja:
+    過去 24 時間以内に発生した AVD コントロールプレーンに起因する可能性のあるエラーを表示
+  title_en:
+    List errors may caused by AVD control-plane in the last 24 hours
+  query: |
+    ```javascript
+    WVDErrors 
+    | where TimeGenerated > ago(24h) 
+    | where ServiceError == "true" 
+    ```
+  description_ja: |
+    ServiceError カラムが true となっているエラーのみをフィルター表示しています。これらのエラーはマイクロソフト サポートへの問い合わせが必要な問題が発生していることを示しています
+  description_en: |
+    List errors for 'ServiceError' column is set to 'true', these records indicate you need to escalate the issue to Microsoft support
+
+- title_ja:
+    過去 24 時間以内に発生したエラーの数を種類ごとに集計
+  title_en:
+    Count the number of errors group by each error type
+  query: |
+    ```javascript
+    WVDErrors 
+    | where TimeGenerated > ago(24h) 
+    | where ServiceError == "false" 
+    | summarize NumOfErrors=count() by ActivityType, Source, CodeSymbolic
+    | sort by Source
+    ```
+  description_ja: |
+    
+  description_en: |
+    
+
+- title_ja:
+    過去 24 時間以内に発生したエラーの数をユーザー毎に集計
+  title_en:
+    Count the number of errors group by each user in the last 24 hours
+  query: |
+    ```javascript
+    WVDErrors 
+    | where TimeGenerated > ago(24h) 
+    | where ServiceError == "false" 
+    | summarize NumOfErrors=count() by UserName
+    ```
+  description_ja: |
+    
+  description_en: |
+
+- title_ja:
+    過去 24 時間以内に <*User UPN*> に指定したユーザーで発生したエラーの一覧を表示
+  title_en:
+    List of errors for specified user as <*User UPN*> in the last 24 hours
+  query: |
+    ```javascript
+    WVDErrors 
+    | where TimeGenerated > ago(24h) 
+    | where ServiceError == "false" 
+    | where UserName == "<User UPN>"
+    ```
+  description_ja: |   
+  description_en: |
+
+- title_ja:
+    過去 24 時間におけるホストプール毎の接続元 IP アドレスを表示
+  title_en:
+    List source IP addresses connecting to session-host per HostPool over the last 24 hours
+  query: |
+    ```javascript
+    WVDConnections
+    | where TimeGenerated > ago(24h)
+    | extend Multi=split(_ResourceId, "/")
+    | extend HostPool = tostring(Multi[8])
+    | summarize count() by ClientSideIPAddress, HostPool
+    ```
+  description_ja: |
+  description_en: |
+
+
+- title_ja:
+    過去 24 時間の <*Host Pool*> で指定したホストプールにおけるユーザー毎の接続時間を表示
+  title_en:
+    List per-user connection duration for specified HostPool as <*Host Pool*> over the last 24 hours
+  query: |
+    ```javascript
+    WVDConnections  
+    | where TimeGenerated > ago(24h)  
+    | extend Multi=split(_ResourceId, "/")
+    | extend HostPool = tostring(Multi[8])
+    | where HostPool == "<Host Pool>"
+    | where State == "Connected"  
+    | project CorrelationId, UserName, StartTime=TimeGenerated
+    | join kind=inner(WVDConnections  
+    | where State == "Completed"  
+    | project EndTime = TimeGenerated, CorrelationId) on CorrelationId  
+    | project Duration = EndTime - StartTime, UserName
+    | summarize ConnectionTimeTotal = sum(Duration) by UserName
+    ```
+  description_ja: |
+    'WVDConnections' テーブルにはユーザーによる接続開始や切断のログが記録されます。
+    このクエリではセッションホストに接続してから切断するまでの時間を集計して、ユーザー毎の接続時間の累計値を算出しています。
+    同じセッションにおける接続と切断のログは 'CorrelationId' が一致するため、join により接続と切断のログを一つのレコードに纏めています。
+  description_en: |
+    The 'WVDConnections' table contains connect/disconnect event by users. 
+    This query aggregates the time between connect and disconnect event from a session host and calculates the cumulative connection time for each user. 
+    Since the 'CorrelationId' of the connect and disconnect events for the same session match, 'join' is used to combine the connect and disconnect event into a single record.
+
+- title_ja:
+    過去 1 週間の <*Host Pool*> で指定したホストプールにおけるユーザー毎の接続時間の推移を表示
+  title_en:
+    Display connection duration per user for specified HostPool as <*Host Pool*> over the past week
+  query: |
+    ```javascript
+    WVDConnections
+    | where TimeGenerated > ago(7d)
+    | extend Multi=split(_ResourceId, "/")
+    | extend HostPool = tostring(Multi[8])
+    | where HostPool == "<Host Pool>"
+    | where State == "Connected"
+    | project CorrelationId, UserName, StartTime = TimeGenerated  
+    | join kind=inner(WVDConnections  
+    | where State == "Completed"  
+    | project EndTime = TimeGenerated, CorrelationId) on CorrelationId  
+    | project DurationInMinutes = (EndTime - StartTime)/1m, UserName, EndTime
+    | summarize ConnectionTimeInMinutes=sum(DurationInMinutes) by bin(EndTime, 24h), UserName
+    | render timechart
+    ```
+  description_ja: |
+    上に書いたクエリーを拡張して、ユーザー毎の接続時間の日次推移をグラフ化しています。
+    datetime 型同士で引き算をすると timespan 型になりますが、この型のままではグラフ化できないため、11 行目で '1m' で割ることで分単位のスカラー値に変換しています。
+  description_en: |
+    This query extend the above query to provide graphical view to see transition of connection duration for each user.  
+    In Line:11, subtracting 'datetime' types result in 'timespan' type, but since this type cannot be rendered as is, convert to a scalar value in minutes by divide by '1m'.
+
+- title_ja:
+    過去 24 時間におけるセッションホストとクライアント デバイス間の応答性（レイテンシ）をホストプール毎に表示
+  title_en:
+    Display connection latency per HostPool between session host and client device over the last 24 hours
+  query: |
+    ```javascript
+    WVDConnectionNetworkData
+    | where TimeGenerated > ago(24h)
+    | extend Multi = split(_ResourceId, "/")
+    | extend HostPool = tostring(Multi[8])
+    | summarize avg(EstRoundTripTimeInMs) by bin(TimeGenerated, 10m), HostPool
+    | render timechart 
+    ```
+  description_ja: |
+    'WVDConnectionNetworkData' テーブルにはセッションホスト接続時の応答性（レイテンシ）の情報が記録されます。
+    このクエリでは過去 24 時間におけるホストプール毎のレイテンシの推移を、10 分毎の平均値として表示しています。
+  description_en: |
+    The 'WVDConnectionNetworkData' table contains estimated latency of session host.
+    This query display the latency per HostPool over the last 24 hours an every 10 minutes average.
+    
+- title_ja:
+    過去 24 時間におけるセッションホストとクライアント デバイス間の応答性（レイテンシ）を <*User UPN*> で指定したユーザーについて表示
+  title_en:
+    Display connection latency per HostPool between session host and client device for specified user as <*User UPN*> over the last 24 hours
+  query: |
+    ```javascript
+    WVDConnectionNetworkData
+    | where TimeGenerated > ago(24h)
+    | join kind=inner (WVDConnections
+    | distinct CorrelationId, UserName) on CorrelationId
+    | where UserName == "<User UPN>"
+    | summarize avg(EstRoundTripTimeInMs) by bin(TimeGenerated, 10m)
+    | render timechart 
+    ```
+  description_ja: |
+    このクエリでは過去 24 時間の特定のユーザーにおけるレイテンシの推移を、10 分毎の平均値として表示しています。
+  description_en: |
+    This query display the connection latency for specified user over the last 24 hours as an every 10 minutes average.
+
+

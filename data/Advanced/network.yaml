@@ -1,0 +1,191 @@
+category: Advanced
+kind: network
+contents:
+  - title_ja: ファイアウォールによって拒否された Azure ファイアウォール アプリケーション ルールの確認
+    title_en: Review Azure Firewall Application Rules denied by firewall
+    query: |
+      ```javascript
+      let q1 = view() {
+      AzureDiagnostics
+      | where Category == "AzureFirewallApplicationRule" 
+      | where msg_s contains " to "
+      |parse kind = regex msg_s with Protocol @" request from " SourceIP ":" SourcePort @" to " TargetURL ":" targetPort @". Action: " Action @".\sN" Reason
+      };
+      let q2 = view() {
+      AzureDiagnostics
+      | where Category == "AzureFirewallApplicationRule" 
+      | where msg_s !contains " to "
+      |parse kind = regex msg_s with Protocol @" request from " SourceIP ":" SourcePort @". Action: " Action @". Reason:" Reason
+      };
+      union withsource="temptable" q1,q2 
+      | where SourceIP == "xx.xx.xx.xx"
+      | summarize count() by TargetURL, targetPort
+      //#| summarize count() by FQDN | order by count_ desc 
+      | order by count_ desc 
+      ```
+    description_ja: ファイアウォールによって拒否された Azure ファイアウォール アプリケーション ルールの確認
+    description_en: Review Azure Firewall Application Rules denied by firewall
+  - title_ja: 特定の IP およびポートに対する Azure ファイアウォールの拒否接続 (ネットワーク ルール) を一覧表示する (必要に応じてクエリを変更する)
+    title_en: List Azure Firewall denied connections (Network Rule) for certain IP and port (modify the query as required)
+    query: |
+      ```javascript
+      AzureDiagnostics
+      | where Category == "AzureFirewallNetworkRule"
+      | parse msg_s with Protocol " request from " SourceIP ":" SourcePortInt:int " to " TargetIP ":" TargetPortInt:int *
+      | parse msg_s with * ". Action: " Action1a
+      | parse msg_s with * "was " Action1b " to " NatDestination
+      | parse msg_s with Protocol2 " request from " SourceIP2 " to " TargetIP2 ". Action:" Action2
+      | extend SourcePort = tostring(SourcePortInt),TargetPort = tostring(TargetPortInt)
+      | extend Action = case(Action1a == "", case(Action1b == "",Action2,Action1b), Action1a),Protocol = case(Protocol == "", Protocol2, Protocol),SourceIP = case(SourceIP == "", SourceIP2, SourceIP),TargetIP = case(TargetIP == "", TargetIP2, TargetIP),SourcePort = case(SourcePort == "", "N/A", SourcePort),TargetPort = case(TargetPort == "", "N/A", TargetPort),NatDestination = case(NatDestination == "", "N/A", NatDestination)
+      | project TimeGenerated,Protocol, SourceIP,SourcePort,TargetIP,TargetPort,Action, NatDestination
+      | where SourceIP == "10.1.4.25" and TargetPort == 22 and Action == "Deny"
+      | order by TimeGenerated desc 
+      ```
+    description_ja: 特定の IP およびポートに対する Azure ファイアウォールの拒否接続 (ネットワーク ルール) を一覧表示する (必要に応じてクエリを変更する)
+    description_en: List Azure Firewall denied connections (Network Rule) for certain IP and port (modify the query as required)
+  - title_ja: NSG フローログ - 送信元 IP に基づいてフローを表示する (必要に応じてクエリを変更する)
+    title_en: NSG Flowlog - Display flows based on Source IP (modify the query as required)
+    query: |
+      ```javascript
+        AzureNetworkAnalytics_CL
+        | where SubType_s == "FlowLog" 
+        | where SrcIP_s == "ipaddress"
+        | summarize by DestIP_s, DestPort_d
+      ```
+    description_ja: NSG フローログ - 送信元 IP(ディスプレイ宛先ポートおよび IP)に基づいてフローを表示します。必要に応じて、IP アドレスを置き換えます。
+    description_en: NSG Flowlog - Display flows based on Source IP (display destination port and IP). Replace the ip address as required.
+  - title_ja: NSG フローログ - ターゲット IP に基づいてフローを表示する (ディスプレイ ソース ポートと IP)
+    title_en: NSG Flowlog - Display flows based on Target IP (display source port and IP)
+    query: |
+      ```javascript
+      AzureNetworkAnalytics_CL
+        | where SubType_s == "FlowLog" 
+        | where DestIP_s == "ipaddress"
+        | summarize by SrcIP_s, DestPort_d
+      ```
+    description_ja: NSG フローログ - ターゲット IP に基づいてフローを表示する (ディスプレイ ソース ポートと IP)
+    description_en: NSG Flowlog - Display flows based on Target IP (display source port and IP)
+  - title_ja: バイト単位に基づいて上位 3 つの受信プロセスを調査する
+    title_en: "Investigate top 3 incoming processes based on Bytes Recieved"
+    query: |
+      ```javascript
+      VMConnection
+      | where Computer == "computername"
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Received = sum(BytesReceived/1024) by ProcessName
+      | top 3 by Received desc
+      ```
+    description_ja: バイト単位に基づいて上位 3 つの受信プロセスを調査する
+    description_en: Investigate top 3 incoming processes based on Bytes Recieved
+  - title_ja: 送信バイト数に基づいて上位 3 つの送信プロセスを調査する
+    title_en: "Investigate top 3 outgoing processes based on Bytes Sent"
+    query: |
+      ```javascript
+      VMConnection
+      | where Computer == "computername"
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Sent = sum(BytesSent/1024) by ProcessName
+      | top 3 by Sent desc
+      ```
+    description_ja: 送信バイト数に基づいて上位 3 つの送信プロセスを調査する
+    description_en: Investigate top 3 outgoing processes based on Bytes Sent
+  - title_ja: 受信バイト数と送信バイト数に基づいて上位 3 つのプロセスを調査する
+    title_en: "Investigate top 3 processes based on Bytes Received and Sent"
+    query: |
+      ```javascript
+      VMConnection
+      | where Computer == "computername"
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Received = sum(BytesReceived/1024), Sent = sum(BytesSent/1024) by ProcessName
+      | extend TotalMb = Received + Sent
+      | extend SentMb = Sent
+      | extend ReceivedMb = Received
+      | project ProcessName, SentMb, ReceivedMb, TotalMb
+      | top 3 by TotalMb desc
+      ```
+    description_ja: 受信バイト数と送信バイト数に基づいて上位 3 つのプロセスを調査する
+    description_en: Investigate top 3 processes based on Bytes Received and Sent
+  - title_ja: ネットワークの送信/秒と受信/秒、時間枠の30分平均を示すグラフ
+    title_en: "Graph showing network Sent/sec and Received/sec, 30 minute average for the timeframe"
+    query: |
+      ```javascript
+      Perf
+      | where Computer == "computername"
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | where ObjectName == "Network Adapter"
+      | where InstanceName == "Microsoft Hyper-V Network Adapter _2"
+      | summarize avg(CounterValue) by CounterName, bin(TimeGenerated, 30min)
+      | order by TimeGenerated desc
+      | render timechart 
+      ```
+    description_ja: ネットワークの送信/秒と受信/秒、時間枠の30分平均を示すグラフ
+    description_en: Graph showing network Sent/sec and Received/sec, 30 minute average for the timeframe
+  - title_ja: 受信バイト数と送信バイト数に基づいて上位 3 つの通信パートナーを調査する
+    title_en: "Investigate top 3 communication partners based on Bytes Received and Bytes Sent"
+    query: |
+      ```javascript
+      VMConnection
+      | where Computer == "computername"
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | extend DNS = tostring(parse_json(RemoteDnsQuestions)[0])
+      | summarize Received = sum(BytesReceived/1024), Sent = sum(BytesSent/1024) by DestinationIp, DNS
+      | extend TotalMb = Received + Sent
+      | extend SentMb = Sent
+      | extend ReceivedMb = Received
+      | project DestinationIp, SentMb, ReceivedMb, TotalMb, DNS
+      | top 3 by TotalMb desc
+      ```
+    description_ja: 受信バイト数と送信バイト数に基づいて上位 3 つの通信パートナーを調査する
+    description_en: Investigate top 3 communication partners based on Bytes Received and Bytes Sent
+  - title_ja: 受信および送信の通信イベントが最も多い上位 10 台のコンピュータを調査する
+    title_en: "Investigate top 10 computers with most inbound and outbound communications events"
+    query: |
+      ```javascript
+      VMConnection
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Events = count() by Computer
+      | top 10 by Events desc
+      ```
+    description_ja: 受信および送信の通信イベントが最も多い上位 10 台のコンピュータを調査する
+    description_en: Investigate top 10 computers with most inbound and outbound communications events
+  - title_ja: ほとんどの通信イベントで上位 10 個のポートを調査する
+    title_en: "Investigate top 10 ports with most communications events"
+    query: |
+      ```javascript
+      VMConnection
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Events = count() by DestinationPort
+      | top 10 by Events desc
+      ```
+    description_ja: ほとんどの通信イベントで上位 10 個のポートを調査する
+    description_en: Investigate top 10 ports with most communications events
+  - title_ja: 受信バイト数と送信バイト数に基づいて上位 3 つの通信ポートを調査する
+    title_en: "Investigate top 3 communication ports based on Bytes Received and Bytes Sent"
+    query: |
+      ```javascript
+      VMConnection
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Received = sum(BytesReceived/1024), Sent = sum(BytesSent/1024) by DestinationPort
+      | extend TotalMb = Received + Sent
+      | extend SentMb = Sent
+      | extend ReceivedMb = Received
+      | project DestinationPort, SentMb, ReceivedMb, TotalMb
+      | top 3 by TotalMb desc
+      ```
+    description_ja: 受信バイト数と送信バイト数に基づいて上位 3 つの通信ポートを調査する
+    description_en: Investigate top 3 communication ports based on Bytes Received and Bytes Sent
+  - title_ja: プロセス名に基づいて上位 3 つの通信ポートを調べる
+    title_en: "Investigate top 3 communication ports based on ProcessName"
+    query: |
+      ```javascript
+      VMConnection
+      | where TimeGenerated between (ago(1d) .. ago(5m))
+      | summarize Received = sum(BytesReceived/1024), Sent = sum(BytesSent/1024) by ProcessName
+      | extend TotalMb = Received + Sent
+      | extend SentMb = Sent
+      | extend ReceivedMb = Received
+      | project ProcessName, SentMb, ReceivedMb, TotalMb
+      | top 3 by TotalMb desc
+      ```
+    description_ja: プロセス名に基づいて上位 3 つの通信ポートを調べる
+    description_en: Investigate top 3 communication ports based on ProcessName

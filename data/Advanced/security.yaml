@@ -1,0 +1,256 @@
+category: Advanced
+kind: security
+contents:
+  - title_ja: 同一のユーザーに対する連続的なログオンの失敗を検出する
+    title_en: Detect continuous logon failures for the same user
+    query: |
+      ```javascript
+      let threshold = 10;
+      let unit = 10m;
+      SigninLogs
+      | where ResultType !in ("0", "50125", "50140")
+      | summarize loginfailure = count() by UserPrincipalName, bin(TimeGenerated,unit)
+      | where loginfailure > threshold 
+      ```
+    description_ja: |
+      このクエリはブルートフォース攻撃を検出するためのサンプルです。  
+      SigninLogs テーブルから `unit` に設定した時間内に `threshold` で設定した回数を超えるサインインの失敗を検出します。  
+      ResultType にサインインの結果が含まれ、0 はサインインが成功し問題がないことを表します。50125 と 50140 はそれぞれパスワードがリセットされた場合とサインインの記憶を設定した場合に記録されるイベントで、頻繁に発生する可能性のある失敗ではないイベントです。  
+ 
+      SigninLogs は Azure AD に対するユーザーなどのサインインを記録します。このログは Azure AD の診断設定から有効化することができ、有効化には Azure AD Premium P1 または P2 のライセンスが必要です。
+      これらのコードは将来変更される可能性がありますが、の詳細は [Azure AD 認証と承認のエラー コード](https://docs.microsoft.com/azure/active-directory/develop/reference-aadsts-error-codes) に記載がある他、[https://login.microsoftonline.com/error](https://login.microsoftonline.com/error) でコードに対応するメッセージを確認することができます。
+    
+    description_en: |
+      This query is a sample for detecting brute force attacks.
+      Detects sign-in failures from the SigninLogs table that exceed the number of times set in `threshold` within the time set in `unit`.
+      ResultType contains the result of the sign-in, where 0 means the sign-in was successful and there are no problems; 50125 and 50140 are events that are logged when the password is reset and when the sign-in memory is set, respectively, and are not failures, which can occur frequently. The following is an example.
+ 
+      SigninLogs records the sign-in of users and others to Azure AD. This logging can be enabled through Azure AD diagnostic settings and requires an Azure AD Premium P1 or P2 license.
+      These codes are subject to change in the future, but for more information on [Azure AD Authentication and Authorization Error Codes](https://docs.microsoft.com/azure/active-directory/develop/reference-aadsts- error-codes), and you can also check the messages corresponding to the codes at [https://login.microsoftonline.com/error](https://login.microsoftonline.com/error).
+    
+  - title_ja: 異なるユーザーに対する連続的なログオンの失敗を検出する
+    title_en: Detect continuous logon failures for different users
+    query: |
+      ```javascript
+      let threshold = 20;
+      let unit = 10m;
+      SigninLogs
+      | where ResultType !in ("0", "50125", "50140")
+      | summarize loginfailure = dcount(UserPrincipalName) by  bin(TimeGenerated,unit)
+      | where loginfailure > threshold 
+      ```
+    description_ja: |
+      このクエリはパスワード スプレー攻撃を検出するためのサンプルです。
+      ブルート フォースは特定のユーザーに複数のパスワードを試行する攻撃ですが、アカウントのロックなどで回避・検出が行われやすいため、パスワードスプレーではパスワードをよく使われやすいものに固定し、ユーザーを変えながらサインインを試行します。
+      このクエリでは `unit` で指定した時間内に記録されたユニークなユーザーによるサインインの失敗を数え、閾値を越えたものを検出します。
+    description_en: |
+      This query is a sample for detecting password spray attacks.
+      Brute force is an attack that attempts multiple passwords for a specific user, but since it is easy to evade and detect by locking accounts, password sprayers fix passwords to the most commonly used ones and attempt sign-in while changing users.
+      This query counts sign-in failures by unique users recorded within the time specified by `unit` and detects those that exceed the threshold.
+
+  - title_ja: Application Gateway で過去に記録されたエラーの数が閾値より多いクライアントの IP アドレスを表示する
+    title_en: Display IP addresses of clients whose number of errors logged by Application Gateway in the past is higher than the threshold value
+    query: |
+      ```javascript
+      let threshold = 10;
+      let lookback = 10m;
+      AzureDiagnostics
+      | where TimeGenerated > ago(lookback)
+      | where Category == "ApplicationGatewayAccessLog"
+      | where httpStatus_d >= 300
+      | summarize ErrCount= count() by clientIP_s,userAgent_s
+      | where ErrCount > threshold
+      ```
+    description_ja: |
+      ApplicationGateway は複数のログを生成します。一つはクライアントからアプリケーションのアクセスがあったことを記録する ApplicationGatewayAccessLog カテゴリで、IP アドレスやユーザーエージェント文字列、アクセス先のアプリケーションの URI とアクセス結果の HTTP ステータスなどが記録されています。このログは AzureDiagnostics の ApplicationGatewayAccessLog カテゴリに記録されます。  
+      偵察のフェーズでは HTTP のステータスコードでエラーが記録されることが多いため、ステータスコードがエラー (300) 以上のレコードをフィルタします。予め設定された閾値を上回るエラーを記録した IP アドレスを検出することで偵察と思われるアクセスを発見します。
+      このクエリはバックエンドのサービスに障害が発生しているようなケースを誤検出する可能性があり、また拠点から複数のユーザーが１つのゲートウェイを経由してインターネットアクセスを行うようなケースでも、同一 IP アドレスからの発信元とみなされるためうまく動作しない可能性があります。緩和策として IP アドレスの他にも UserAgent_s でユーザーエージェント文字列によりアクセス元を区別するようにしていますが、十分ではありません。
+    description_en: |
+      Application Gateway accesses are logged in the ApplicationGatewayAccessLog category in AzureDiagnostics.
+      During the reconnaissance phase, since errors are often logged with HTTP status codes, records with a status code of error (300) or higher are filtered. We find accesses that appear to be reconnaissance by detecting IP addresses that have recorded errors above a pre-defined threshold.
+      This query may mis-detect cases where back-end services have failed, or where multiple users from a location access the Internet through a single gateway, but they are considered to originate from the same IP address. This may cause the system to not work properly. As a mitigation measure, in addition to IP addresses, UserAgent_s is used to distinguish access sources by user agent strings, but this is not sufficient.
+      
+  - title_ja: Application Gateway で複数のアプリケーションに対してアクセスエラーとなっているクライアント IP アドレスを表示する
+    title_en: Display client IP addresses that are causing access errors for multiple applications in Application Gateway
+    query: |
+      ```javascript
+      let threshold = 5;
+      let lookback = 10m;
+      AzureDiagnostics
+      | where TimeGenerated > ago(lookback)
+      | where Category == "ApplicationGatewayAccessLog"
+      | where httpStatus_d >= 300
+      | summarize UriCount = dcount(requestUri_s) by clientIP_s
+      | where UriCount > threshold
+      ```
+    description_ja: |
+      偵察フェーズではパスの総当たりや脆弱性のあるアプリケーションを確認するために複数のアプリケーションのパスに対してアクセスを行うことがあります。この結果単位時間内に複数の requestUri_s に対してエラーが発生します。
+      dcount は指定された列に対してユニークな数をカウントする関数で、このクエリでは clientIP_s に対してユニークな requestUri_s の数、つまり特定の clientIP_s からアクセスが試行されたアプリケーションの数が集計されます。
+      レコード httpStatus_d がエラーになるものにフィルタされているため、ある IP からアクセスに失敗したアプリケーションの数を閾値と比較して攻撃を検出することができます。  
+      実際の攻撃では発信元 IP が複数に分散している場合もあるので注意が必要です。
+    description_en: |
+      During the reconnaissance phase, accesses may be made to multiple application paths in order to brute force the paths and identify vulnerable applications. This results in multiple requestUri_s errors within a unit of time.
+      dcount is a function that counts the number of unique counts for a given column. In this query, the number of unique requestUri_s for clientIP_s, i.e., the number of applications that have attempted access from a particular clientIP_s, is tallied.
+      The record httpStatus_d is filtered for errors, so the number of applications that fail to access from a given IP can be compared to a threshold to detect attacks.
+      Note that in actual attacks, the source IPs may be distributed across multiple locations.
+  - title_ja: Application Gateway で複数回のアクセス エラーの後にアプリケーションのアクセスに成功したクライアントの IP アドレスを表示する
+    title_en: Application Gateway displays IP addresses of clients who successfully accessed the application after multiple access errors
+    query: |
+      ```javascript
+      let lookback = 10m;
+      let threshold = 10;
+      let SuccessIPs = AzureDiagnostics
+      | where TimeGenerated > ago(lookback)
+      | where Category == "ApplicationGatewayAccessLog"
+      | where httpStatus_d between (200 .. 299) 
+      | summarize AccessTime = max(TimeGenerated) by clientIP_s;
+      AzureDiagnostics
+      | where TimeGenerated > ago(lookback)
+      | where httpStatus_d >= 300
+      | join kind=inner SuccessIPs on clientIP_s 
+      | where TimeGenerated < AccessTime
+      | summarize ErrBeforeSuccess = count() by clientIP_s
+      | where ErrBeforeSuccess > threshold
+      ```
+    description_ja: |
+      偵察フェーズではエラーが発生することが多いですが、エラーが続いたあとに HTTP のアクセス成功コードがかえる場合、アプリケーションの不正なアクセスに成功している可能性があります。
+      このクエリでは ApplicationGatewayAccessLog から IP アドレスごとにアクセスに成功した最後の時刻のデータセットを作成し、元の ApplicationGatewayAccessLog からエラーだけを抽出したデータセットと join します。
+      アクセスに成功した時刻が AccessTime 列に含まれるため、TimeGenerated がこれより小さい（古い）レコードを数え、アクセス成功前に閾値を超える回数エラーが発生していたことを検出します。
+    description_en: |
+      Although errors often occur during the reconnaissance phase, if the HTTP access success code changes after a series of errors, the application may have succeeded in gaining unauthorized access.
+      This query creates a dataset of the last successful access time for each IP address from the ApplicationGatewayAccessLog and joins it with a dataset of only the errors from the original ApplicationGatewayAccessLog.
+      Since the time of the successful access is included in the AccessTime column, TimeGenerated counts records that are smaller (older) than this and detects that the error occurred more than a threshold number of times before the successful access.
+  - title_ja: Web Application Firewall で検出した攻撃を表示する
+    title_en: Display attacks detected by the Web Application Firewall
+    query: |
+      ```javascript
+      AzureDiagnostics
+      | where Category== "ApplicationGatewayFirewallLog"
+      | project TimeGenerated,clientIp_s,hostname_s,requestUri_s,ruleSetVersion_s,ruleId_s,Message,details_message_s,details_data_s
+      ```
+    description_ja: |
+      WAF が有効な場合 ApplicationGatewayFirewallLog カテゴリに WAF のルールによる検出結果を記録することができます。このクエリでは WAF のルール検出の際によく使う項目を表示しています。
+    description_en: |
+       If WAF is enabled, the ApplicationGatewayFirewallLog category can record the detection results of WAF rules. This query shows the most frequently used items for WAF rule detection.
+
+  - title_ja: AzureActivity で過去１か月に発生していなかった新しい管理操作を検出する
+    title_en: zureActivity detects new Administrative operations that had not occurred in the past month
+    query: |
+      ```javascript
+      let past1month = AzureActivity
+      | where TimeGenerated between (ago(30d) .. startofday(now()))
+      | where CategoryValue == "Administrative"
+      | distinct  OperationNameValue;
+      AzureActivity
+      | where TimeGenerated >  startofday(now())
+      | where CategoryValue == "Administrative"
+      | where OperationNameValue !in (past1month)
+      | project TimeGenerated, OperationNameValue, OperationName, ResourceGroup, ResourceProviderValue, Caller
+
+      ```
+    description_ja: |
+      Administrative テーブルは `Administrative` に管理操作を記録します。システムの変更が発生していないときには管理操作は一定のものが記録されますが、急に記録されていない新しい操作が記録された場合には、新しく変更作業が発生したか、セキュリティ侵害の兆候の可能性があります。  
+    description_en: |
+      The Administrative table records administrative operations in `Administrative`. When no system changes have occurred, administrative operations are recorded consistently, but if new, unrecorded operations are suddenly recorded, this may indicate that new change work has occurred or that a security breach has occurred.
+  - title_ja: 他のコンピューターでは起動していないプロセスを持つコンピューターを表示する
+    title_en: View computers with processes that are not running on other computers
+    query: |
+      ```javascript
+      VMProcess 
+      | summarize UniqueProcesses = dcount(Computer) by ExecutableName
+      | where UniqueProcesses == 1
+      | join (
+      VMProcess
+      | project Computer, ExecutableName, ExecutablePath
+      ) on ExecutableName
+      | distinct ExecutableName, Computer, ExecutablePath
+      | order by Computer, ExecutableName
+      ```
+    description_ja: |
+      サーバー ワークロードでは同じ役割のコンピューターでは同じプロセスが起動することになるため、ユニークなプロセスが起動している場合には何か特殊な操作を行っている可能性があります。
+      これは何らかの変更作業に伴うものである可能性もありますし、セキュリティ侵害を示唆するものである可能性もあります。
+    description_en: |
+      Since server workloads will have the same process running on computers in the same role, if a unique process is running, it may be performing some special operation.
+      This could be due to some change work, or it could indicate a security breach.    
+  - title_ja: Secuire Score の１週間の変化を確認する
+    title_en: Check the weekly change in Secure Score
+    query: |
+      ```javascript
+      SecureScores 
+      | where TimeGenerated > ago(7d)
+      | extend SecureScorePercentage = PercentageScore*100
+      | summarize AverageScore = avg(SecureScorePercentage) by bin(TimeGenerated, 1d)
+      ```
+    description_ja: |
+      セキュリティ スコアは無償で利用することができる Microsoft Defender for Cloud のポスチャ マネジメントの機能です。
+      Azure Policy を使用して、マイクロソフトの推奨設定が行われているかをチェックします。
+      ワークロードの追加や更新プログラムのリリースにより日々変化するため、90% 以上を維持するようにメンテナンスしましょう。
+
+    description_en: |
+      Security Score is a Posture Management feature of Microsoft Defender for Cloud that is available free of charge.
+      Use Azure Policy to check that Microsoft's recommended settings are in place.
+      Maintain it at 90% or better, as it changes daily with the addition of workloads and the release of updates.
+    
+  - title_ja: ApplicationGateway のバックエンド プールのリソースからのデータ送信を検出する
+    title_en: Detect data transmissions from resources in the ApplicationGateway back-end pool
+    query: |
+      ```javascript
+      let backend = AzureDiagnostics
+      | where Category == "ApplicationGatewayAccessLog"
+      | where serverRouted_s <> ""
+      | distinct serverRouted_s;
+      AzureDiagnostics
+      | where Category == "AzureFirewallNetworkRule" or Category == "AzureFirewallApplicationRule"
+      | parse msg_s with *  " request from " SourceIP ":" SourcePort " to " Dest ":" DestPort "." *
+      | project TimeGenerated,SourceIP,SourcePort,Dest,DestPort
+      | where SourceIP in (backend)
+      ```
+    description_ja: |
+      アプリケーションゲートウェイのバックエンドに対する通信は Web Applicaiton Firewall によって件さされますが、検出されなかった攻撃のペイロードはバックエンドが受け取る可能性があります。
+      ペイロードは様々な動作をすることが考えられますが、インターネット上の C&C サーバーと通信を行うためにアウトバウンドのデータ通信を発生させるものがあります。  
+      このクエリでは Azure Firewall が使われていて、全てのインターネット向け通信は Azure Firewall にルーティングされるように構成されている環境を想定しています。
+      pplicationGateway のバックエンド サーバーの IP アドレスは serverRouted_s に記録されるため、serverRouted_s のリストを作成します。
+      Azure Firewall では IP ベースのネットワークルール、URL ベースのアプリケーション ルールともに送信元アドレスが記録されるため、送信元アドレスが予め作成したバックエンドのリストと一致するものがデータ送信を行おうとしたバックエンドです。
+    description_en: |
+      Communications to the back end of the Application Gateway are filtered by the Web Applicaiton Firewall, but the back end may receive undetected attack payloads.
+      Payloads may behave in a variety of ways, but some generate outbound data communications to communicate with C&C servers on the Internet.
+      This query assumes an environment where the Azure Firewall is in use and all Internet-facing communications are configured to be routed to the Azure Firewall.
+      Create a list of serverRouted_s since the IP addresses of the back-end servers of the pplicationGateway are recorded in serverRouted_s.
+      Since Azure Firewall records the source address for both IP-based network rules and URL-based application rules, the backend that attempted to send data is the one whose source address matches the list of backends created in advance.
+  - title_ja: コンピューターに対して対話的ログインを行ったユーザーを表示する
+    title_en: View who has interactively logged in to the computer
+    query: |
+      ```javascript
+      SecurityEvent 
+      | where EventID == 4624 and (LogonType == 2 or LogonType == 10) and AccountType == "User"
+      | summarize count() by Computer, Account
+      ```
+    description_ja: |
+      一般的に運用中のサーバーには、変更管理の期間を除き対話的ログオンが発生することはありません。
+      SecurityEvent は Windows のセキュリティ ログが記録されますが対話的ログインのイベントを検出することで簡単なセキュリティ監視を実装することができます。
+      SecurityEvent を取得するためには Defender for Cloud の有償 SKU が必要です。
+
+    description_en: |
+      Generally, servers in operation do not have interactive logons except for periods of change management.
+      SecurityEvent is logged by Windows security logs, but can implement simple security monitoring by detecting interactive login events.
+      A paid SKU of Defender for Cloud is required to obtain SecurityEvents.
+
+  - title_ja: 脅威インテリジェンスに含まれる IP アドレスへの送信アクセスを検出する
+    title_en: Detect outbound access to IP addresses included in threat intelligence
+    query: |
+      ```javascript
+      let maliciousIPs = 
+      ThreatIntelligenceIndicator
+      | where NetworkIP <> "" and Active == true and ExpirationDateTime > now()
+      | distinct NetworkIP;
+      AzureDiagnostics
+      | where Category == "AzureFirewallNetworkRule"
+      | parse msg_s with *  " request from " SourceIP ":" SourcePort " to " DestIP ":" DestPort "." *
+      | where DestIP  in (maliciousIPs)
+      ```
+    description_ja: |
+      このクエリを実行するためには Azure Sentinel が必要です。Azure Sentinel では様々なデータソースからログを連携するためのデータコネクタがあり、脅威インテリジェンス（信頼できないIP、URL、ファイルハッシュなど）を取り込むことができます。
+      この例では脅威インテリジェンスから得られたアクティブな信頼できない IP アドレスに対して Azure Firewall のログを照会し、あやしい外部アクセスがあるかどうかを確認しています。
+    description_en: |
+      Azure Sentinel is required to perform this query; Azure Sentinel has data connectors to federate logs from various data sources and can pull in threat intelligence (untrusted IPs, URLs, file hashes, etc.).
+      In this example, the Azure Firewall logs are queried against active untrusted IP addresses obtained from threat intelligence to see if there is any suspicious external access.

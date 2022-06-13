@@ -1,0 +1,45 @@
+<!--loop by category-->
+{{range index .Site.Data (.Get "category")}}
+<!--loop by kind-->
+{{ if eq (index . "kind") $.Params.kind }}
+<!--condition kind from params-->
+{{range index . "contents"}}
+
+<div>
+    <details>
+        <summary>
+            <!--condition from parameter-->
+            {{if and (eq $.Params.lang "ja") (ne .title_ja "NA") }}
+              {{if and (eq $.Params.lang "ja") (ne .title_ja "") }}
+                {{if and (eq $.Params.lang "ja") (ne .title_ja nil) }}
+                  {{.title_ja | markdownify}}
+                {{else}}
+                  {{.title_en | markdownify}}
+                {{end}}
+              {{else}}
+                {{.title_en | markdownify}}
+              {{end}}
+            {{else}}
+              {{.title_en | markdownify}}
+            {{end}}
+            <!--label-->
+            {{if ne .target nil}}
+              ({{range .target}}<span style="color:red">{{. | markdownify}}</span>/{{end}})
+            {{end}}
+        </summary>
+        <p>{{.query | markdownify}}</p>
+        <!--日本語の解説がnilでなくかつ2文字以上の場合は日本語を出す-->
+        {{if and (eq $.Params.lang "ja") (ne .description_ja nil)}}
+          {{if and (eq $.Params.lang "ja") (gt (len .description_ja) 3)}}
+              <p>解説 :<br>{{.description_ja | markdownify}}</p>
+          {{else}}
+            <p>Description :<br>{{.description_en | markdownify}}</p>
+          {{end}}
+        {{else}}
+          <p>Description :<br>{{.description_en | markdownify}}</p>
+        {{end}}
+    </details>
+</div>
+
+<!--condition kind from params-->
+{{end}}{{end}}{{end}}

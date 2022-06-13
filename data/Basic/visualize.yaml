@@ -1,0 +1,112 @@
+category: Basic
+kind: visualize
+contents:
+  - title_ja:
+      ""
+    title_en:
+      "Show event count as a chart"
+    query: |
+      ```javascript
+      SecurityEvent 
+      | summarize EventCount = count() by EventID
+      | top 10 by EventCount
+      | render columnchart 
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the top 10 Security Events
+  - title_ja:
+      ""
+    title_en:
+      "Show event count distribution over time"
+    query: |
+      ```javascript
+      SecurityEvent 
+      | summarize EventCount = count() by bin(TimeGenerated, 1h), Computer
+      | render timechart 
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the security event distribution over time, per computer
+  - title_ja:
+      ""
+    title_en:
+      "Show CPU Utilisation over time"
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Namespace == "Processor" and Name == "UtilizationPercentage"
+      | summarize AverageValue = avg(Val) by bin(TimeGenerated, 1h), Computer
+      | render timechart with (ycolumns = Computer, series= AverageValue)
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the processor utilisation over time with aggregations into 1 hour averages, broken down by computer
+  - title_ja:
+      ""
+    title_en:
+      "Show Memory Utilisation over time"
+    query: |
+      ```javascript
+      InsightsMetrics
+      | where Namespace == "Memory" and Name == "AvailableMB"
+      | extend memorySizeMB = toint(parse_json(Tags).["vm.azm.ms/memorySizeMB"])
+      | extend PercentageUsed = 100-(Val/memorySizeMB)*100
+      | summarize AverageValue = avg(PercentageUsed) by bin(TimeGenerated, 30m), Computer
+      | render timechart
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the percentage used memory over time with aggregations into 30 minute averages, broken down by computer. The memory used percentage is a calculated column, as only available memory in MB and total memory in MB is presented
+  - title_ja:
+      ""
+    title_en:
+      "Show Pie graph of sources collected in Azure Diagnostics"
+    query: |
+      ```javascript
+      AzureDiagnostics 
+      | summarize count() by ResourceProvider
+      | render piechart 
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the different sources collected into Azure Diagnostics
+  - title_ja:
+      ""
+    title_en:
+      "Show Pie graph of current missing updates in Update Management"
+    query: |
+      ```javascript
+      Update
+      | where UpdateState == "Needed" and OSType!="Linux"
+      | summarize  arg_max(TimeGenerated, *) by Title
+      | where (Classification == "Security Updates" or Classification == "Critical Updates" or Classification == "Definition Updates" or Classification == "Others")
+      | summarize MissingUpdates = count() by Classification
+      | order by MissingUpdates desc
+      | render piechart 
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of the missing update count in Update Management
+  - title_ja:
+      ""
+    title_en:
+      "Show Area Chart of Logic Apps Run Latency"
+    query: |
+      ```javascript
+      AzureMetrics 
+      | where ResourceProvider == "MICROSOFT.LOGIC"
+      | where MetricName == "RunLatency"
+      | summarize AverageLatency = avg(Average) by bin(TimeGenerated, 10m), Resource
+      | render areachart
+      ```
+    description_ja: |
+      NA
+    description_en: |
+      Use the render operator to draw a chart of run latency for logic apps

@@ -1,0 +1,223 @@
+category: Advanced
+kind: data
+contents:
+    - title_ja:
+        "Azure SQL Database: SQL Database で出力可能なカテゴリを表示してください"
+      title_en:
+        "Azure SQL Database: Show the categories that can be output by SQL Database"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | summarize by Category
+        ```
+      description_ja: |
+        「DatabaseWaitStatistics」カテゴリでは指定した範囲期間内にデータベース内で発生した内部リソースの待機時間の詳細が確認できます。「QueryStoreWaitStatistics」カテゴリではクエリストア内に格納された情報全体からデータベース内で発生した内部リソースの待機時間の詳細が確認できます。「Errors」カテゴリでは発生したエラーを確認できます。
+      description_en: |
+        In the "Database Wait Statistics" category, you can see the details of the waiting time of internal resources that occurred in the database within the specified range period. In the "Query Store Wait Statistics" category, you can see the details of the waiting time of internal resources generated in the database from the entire information stored in the query store. You can see the errors that occurred in the "Errors" category.
+    - title_ja:
+        "Azure SQL Database: リソース待機時間の詳細を円グラフで表示してください"
+      title_en:
+        "Azure SQL Database: View resource wait time details in a pie chart"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'DatabaseWaitStatistics'
+        | summarize sum(delta_wait_time_ms_d) by wait_type_s
+        | sort by sum_delta_wait_time_ms_d desc
+        | render piechart 
+        ```
+      description_ja: |
+        待機時間の多いリソースに着目することで、データベースのパフォーマンス改善の糸口を発見することができます。
+      description_en: |
+        By focusing on resources with high latency, you can discover clues to improve database performance.
+    - title_ja:
+        "Azure SQL Database: リソース待機回数の詳細を円グラフで表示してください"
+      title_en:
+        "Azure SQL Database: Display the details of the resource wait count in a pie chart"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'DatabaseWaitStatistics'
+        | summarize sum(delta_waiting_tasks_count_d) by wait_type_s
+        | sort by sum_delta_waiting_tasks_count_d desc
+        | render piechart 
+        ```
+      description_ja: |
+        待機回数の多いリソースに着目することで、データベースのパフォーマンス改善の糸口を発見することができます。
+      description_en: |
+        By focusing on resources with high wait times, you can find clues to improve database performance.
+    - title_ja:
+        "Azure SQL Database: クエリストア内に格納されたリソース待機時間情報の詳細を円グラフで表示してください"
+      title_en:
+        "Azure SQL Database: View the details of the resource wait time information stored in the query store in a pie chart"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'QueryStoreWaitStatistics'
+        | summarize sum(total_query_wait_time_ms_d) by wait_category_s
+        | sort by sum_total_query_wait_time_ms_d desc
+        | render piechart 
+        ```
+      description_ja: |
+        待機時間の多いリソースに着目することで、データベースのパフォーマンス改善の糸口を発見することができます。クエリストア内にはデフォルトで1ヵ月分の情報が格納されるため、より広い範囲での確認が可能です。
+      description_en: |
+        By focusing on resources with high latency, you can discover clues to improve database performance. By default, one month's worth of information is stored in the query store, so you can check in a wider range.
+    - title_ja:
+        "Azure SQL Database: SQL Database で発生したエラーを表示してください"
+      title_en:
+        "Azure SQL Database: View errors that occurred in SQL Database"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'Errors'
+        | project TimeGenerated, error_number_d, Severity, state_d, Message
+        ```
+      description_ja: |
+        データベースで発生したエラーを把握することは顕在化した障害の解決や、潜在的な障害を未然に防止することにつながります。
+      description_en: |
+        Understanding the errors that occur in the database will help resolve the actual failures and prevent potential failures.
+    - title_ja:
+        "Azure SQL Database: SQL Database で発生したエラー数を時系列に折れ線グラフで表示してください"
+      title_en:
+        "Azure SQL Database: Display the number of errors that occurred in SQL Database in a line graph in chronological order"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'Errors'
+        | summarize count() by TimeGenerated
+        | render timechart  
+        ```
+      description_ja: |
+        データベースで発生したエラーの回数を把握することは顕在化した障害の解決や、潜在的な障害を未然に防止することにつながります。
+      description_en: |
+        Understanding the number of errors that occur in the database will help resolve the actual failures and prevent potential failures.    
+    - title_ja:
+        "Azure SQL Managed Instance: リソース使用状況を表示してください"
+      title_en:
+        "Azure SQL Managed Instance: View resource usage for Azure SQL Managed Instance"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == "ResourceUsageStats"
+        ```
+      description_ja: |
+        Category オペレーターに "ResourceUsageStats" を指定することで、Azure SQL Managed Instance の様々なリソースの使用状況を確認することができます。
+      description_en: |
+        You can check the usage status of various resources of Azure SQL Managed Instance by specifying "ResourceUsageStats" as the Category operator.
+    - title_ja:
+        "Azure SQL Managed Instance: 平均 CPU 使用率、読み込みバイト数、書き込みバイト数を表示してください"
+      title_en:
+        "Azure SQL Managed Instance: View average CPU usage, read bytes, and write bytes for Azure SQL Managed Instance"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == "ResourceUsageStats"
+        | project avg_cpu_percent_s, io_bytes_read_s, io_bytes_written_s
+        ```
+      description_ja: |
+        秒ごとの CPU 使用率は avg_cpu_percent_s 列、秒ごとの読み取りバイト数は io_bytes_read_s 列、秒ごとの書き込みバイト数は io_bytes_written 列で確認することが可能です。
+      description_en: |
+        You can see the CPU usage per second in the avg_cpu_percent_s column, the number of bytes read per second in the io_bytes_read_s column, and the number of bytes written per second in the io_bytes_written column.
+    - title_ja:
+        "Azure SQL Managed Instance: 平均 CPU 使用率、読み込みバイト数、書き込みバイト数の 5 分ごとの平均値を、時刻で並べ替えて昇順に表示してください"
+      title_en:
+        "Azure SQL Managed Instance: Display the average CPU usage, read bytes, and write bytes average for Azure SQL Managed Instance every 5 minutes, sorted in time, in ascending order."
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == "ResourceUsageStats" 
+        | sort by  asc 
+        | summarize avg(todouble(avg_cpu_percent_s)), avg(todouble(io_bytes_read_s)), avg(todouble(io_bytes_written_s)) by bin(TimeGenerated, 5m)
+        ```
+      description_ja: |
+        avg_cpu_percent_s 列、io_bytes_read_s 列および io_bytes_written 列は文字列型なので、平均値を求めるために数値型に変換する必要があります。また、時系列で表示するために TimeGenerated で並べ替えを行います。
+      description_en: |
+        The avg_cpu_percent_s, io_bytes_read_s, and io_bytes_written columns are string types and must be converted to numeric types to get the average. It also sorts by TimeGenerated to display in chronological order.
+    - title_ja:
+        "Azure SQL Managed Instance: 平均 CPU 使用率、読み込みバイト数、書き込みバイト数の 5 分ごとの平均値を、時刻で昇順に並べ替えて折れ線グラフで表示してください"
+      title_en:
+        "Azure SQL Managed Instance: View the average 5-minute average CPU usage, read bytes, and write bytes for Azure SQL Managed Instance in a line chart, sorted in ascending order by time."
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == "ResourceUsageStats" 
+        | sort by TimeGenerated asc 
+        | summarize avg(todouble(avg_cpu_percent_s)), avg(todouble(io_bytes_read_s)), avg(todouble(io_bytes_written_s)) by bin(TimeGenerated, 5m)
+        | render timechart
+        ```
+      description_ja: |
+        render オペレーターを timechart キーワードとともに使用して折れ線グラフを表示します。
+      description_en: |
+        Use the render operator with the timechart keyword to display a line chart.
+    - title_ja:
+        "Azure Synapse Analytics Dedicated SQL Pool: 過去 30 日の期間内で、実行の時間の長いクエリ上位 20 件を表示してください (クエリ解析 ステップ 1)"
+      title_en:
+        "Azure Synapse Analytics Dedicated SQL Pool: View the top 20 longest-running queries within the last 30 days (Query analysis step 1)"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category == 'ExecRequests'
+        | where StatementType_s !in ('Batch','Execute')
+        | summarize Session_ID=any(SessionId_s),Request_ID=any(RequestId_s),Submit_Time=max(SubmitTime_t),Start_Time=max(StartTime_t),End_Time=max(EndTime_t),Command=any(Command_s),Status=min(Status_s), Statement_Type=any(StatementType_s),Resource_class=any(ResourceClass_s) by RequestId_s
+        | summarize ElapsedTime_min=anyif((End_Time - Start_Time)/1m,Start_Time > ago(30d)),Session_ID=any(Session_ID), Submit_Time=any(Submit_Time) ,Start_Time=any(Start_Time), End_Time=any(End_Time),Command=any(Command),Status=any(Status),Statement_Type=any(Statement_Type),Resource_class=any(Resource_class) by Request_ID
+        | order by ElapsedTime_min desc
+        | limit 20
+        ```
+      description_ja: |
+        Dedicated SQL Poolの ExecRequests カテゴリでは、クエリの実行時間を確認することができます。クエリの実行時間/状態によっては、複数行に渡って一つのクエリの情報が表示されるため、summarize オペレータを使用して必要な情報だけを表示するようにします。処理時間はクエリ終了時間(End_Time)と開始時間(Start_Time)の差から計算しています。より長い期間の確認が必要な場合は ago オペレーターの引数の値を増やしてください (サンプルでは 30d (30日)としています)。また、表示件数を増やす場合は limit オペレーターの値を増やしてください。Request_ID 列の値はステップ 2で使用します。
+      description_en: |
+        In the ExecRequests category of the Dedicated SQL Pool, you can see the execution time of the query. Depending on the execution time / state of the query, the information for one query may be displayed over multiple lines, so use the summarize operator to display only the information you need. The processing time is calculated from the difference between the query end time (End_Time) and the start time (Start_Time). If you need to check for a longer period, increase the value of the previous operator argument (30d (30 days) in the sample). Also, if you want to increase the number of items displayed, increase the value of the limit operator. The value in the Request_ID column will be used in step 2.
+    - title_ja:
+        "Azure Synapse Analytics Dedicated SQL Pool: 分散クエリの各ステップで処理されたデータ件数を表示してください (クエリ解析 ステップ 2)"
+      title_en:
+        "Azure Synapse Analytics Dedicated SQL Pool: Show the number of data processed in each step of the distributed query (Query analysis step 2)"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category  == 'RequestSteps'
+        | where RequestId_s == 'QIDnnnnnn' //Put your QueryID here
+        | where Status_s != 'Running'
+        | summarize max(StartTime_t),max(EndTime_t),max(RequestId_s),max(OperationType_s),max(RowCount_d),max(Command_s),max(Status_s) by StepIndex_d
+        | order by StepIndex_d asc
+        ```
+      description_ja: |
+        Dedicated SQL Poolの RequestSteps カテゴリでは、分散クエリの各ステップの情報を取得することができます。一番長く時間がかかっているステップを確認することで、対処方法を検討することができます。解析対象としたいクエリの Request_ID の値 (クエリ解析 ステップ 1にて取得)を、クエリ内で指定してください。
+      description_en: |
+        In the RequestSteps category of the Dedicated SQL Pool, you can get information about each step in a distributed query. You can consider what to do by looking at the steps that are taking the longest time. Specify the Request_ID value (obtained in query analysis step 1) of the query you want to analyze in the query.
+    - title_ja:
+        "Azure Synapse Analytics Dedicated SQL Pool: 過去 30 日の期間内で、処理件数の多いクエリステップ上位 20 件を表示してください (クエリ解析 ステップ 3)"
+      title_en:
+        "Azure Synapse Analytics Dedicated SQL Pool: View the top 20 most processed query steps in the last 30 days (Query analysis step 3)"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category  == 'RequestSteps'
+        | extend elapsedTime = EndTime_t - StartTime_t
+        | extend elapsedTime_min = elapsedTime/1m
+        | where EndTime_t >= ago(30d)
+        | where StartTime_t >= ago(30d)
+        | order by RowCount_d desc
+        | project RequestId_s,OperationType_s, RowCount_d,elapsedTime_min , StartTime_t, EndTime_t, Status_s
+        | limit 20
+        ```
+      description_ja: |
+        Dedicated SQL Poolの RequestSteps カテゴリでは、分散クエリの各ステップの情報を取得することができます。一番長く時間がかかっているクエリステップを確認することで、対処が必要なクエリの発見が可能です。より長い期間の確認が必要な場合は ago オペレーターの引数の値を増やしてください (サンプルでは 30d (30日)としています)。また、表示件数を増やす場合は limit オペレーターの値を増やしてください。Request_ID 列の値はステップ 4で使用します。
+      description_en: |
+        In the RequestSteps category of the Dedicated SQL Pool, you can get information about each step in a distributed query. By checking the query step that takes the longest time, you can find the query that needs to be dealt with. If you need to check for a longer period, increase the value of the previous operator argument (30d (30 days) in the sample). Also, if you want to increase the number of items displayed, increase the value of the limit operator. The value in the Request_ID column will be used in step 4.
+    - title_ja:
+        "Azure Synapse Analytics Dedicated SQL Pool: 処理件数が多い分散クエリステップのクエリ全体の処理時間を表示してください (クエリ解析 ステップ 4)"
+      title_en:
+        "Azure Synapse Analytics Dedicated SQL Pool: Display the processing time of the entire query of the distributed query step with a large number of processing (Query analysis step 4)"
+      query: |
+        ```javascript
+        AzureDiagnostics
+        | where Category  == 'RequestSteps'
+        | where RequestId_s == 'QIDnnnnn' //Insert your QID here
+        | where Status_s != 'Running'
+        | summarize max(StartTime_t),max(EndTime_t),max(RequestId_s),max(OperationType_s),max(RowCount_d),max(Command_s),max(Status_s) by StepIndex_d
+        | order by StepIndex_d asc
+        ```
+      description_ja: |
+        Dedicated SQL Poolの ExecRequests カテゴリでは、クエリ処理状況を確認することができます。解析対象としたいクエリの Request_ID の値 (クエリ解析 ステップ 2にて取得)を、クエリ内で指定してください。
+      description_en: |
+        You can check the query processing status in the ExecRequests category of the Dedicated SQL Pool. Specify the Request_ID value (obtained in query analysis step 2) of the query you want to analyze in the query.
