@@ -1,5 +1,5 @@
 {
-    "name": "fta-hackon2022",
+    "name": "fta-kusto100kocks",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
@@ -17,12 +17,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/tsubasaxZZZ/fta-hackon2022.git"
+        "url": "git+https://github.com/azure/fta-kusto100kocks.git"
     },
     "author": "",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/tsubasaxZZZ/fta-hackon2022/issues"
+        "url": "https://github.com/azure/fta-kusto100kocks/issues"
     },
-    "homepage": "https://github.com/tsubasaxZZZ/fta-hackon2022#readme"
+    "homepage": "https://github.com/azure/fta-kusto100kocks#readme"
 }
