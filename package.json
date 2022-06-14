@@ -1,5 +1,5 @@
 {
-    "name": "fta-kusto100kocks",
+    "name": "fta-kusto100knocks",
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
@@ -17,12 +17,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/azure/fta-kusto100kocks.git"
+        "url": "git+https://github.com/azure/fta-kusto100knocks.git"
     },
     "author": "",
     "license": "ISC",
     "bugs": {
-        "url": "https://github.com/azure/fta-kusto100kocks/issues"
+        "url": "https://github.com/azure/fta-kusto100knocks/issues"
     },
-    "homepage": "https://github.com/azure/fta-kusto100kocks#readme"
+    "homepage": "https://github.com/azure/fta-kusto100knocks#readme"
 }
