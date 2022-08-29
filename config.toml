@@ -15,6 +15,9 @@ defaultContentLanguage = "en"
 # Useful when translating.
 #enableMissingTranslationPlaceholders = true
 
+[services.googleAnalytics]
+id = "G-Q7J6SYY1S8"
+
 #[menu]
 #  [[menu.main]]
 #    identifier = "documentation"
